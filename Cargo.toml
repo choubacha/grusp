@@ -1,0 +1,9 @@
+[package]
+name = "grusp"
+version = "0.1.0"
+authors = ["Kevin Choubacha <kchoubacha@weedmaps.com>"]
+
+[dependencies]
+clap = "2.27"
+regex = "0.2"
+glob = "0.2"
