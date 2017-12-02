@@ -1,8 +1,5 @@
-use clap::ArgMatches;
-
 use regex;
 use regex::{Regex};
-use std;
 
 pub struct Opts {
     pub regex: Regex,
@@ -12,7 +9,7 @@ pub struct Opts {
 #[derive(Debug)]
 pub enum ArgError {
     InvalidRegex(String),
-    Incomplete,
+    _Incomplete,
 }
 
 fn get_regex(regex: &str) -> Result<Regex, ArgError> {

@@ -5,10 +5,8 @@ extern crate regex;
 
 mod matcher;
 mod args;
-use std::env;
+mod display;
 use glob::glob;
-use regex::Regex;
-
 
 fn main() {
     let opts = match args::get_opts() {
@@ -24,13 +22,8 @@ fn main() {
             .filter(|p| p.is_ok())
             .map(|p| p.unwrap())
             .map(|p| matcher::find_matches(p.as_path(), &opts.regex).expect("Could not parse file"))
-            .filter(|matches| matches.has_matches())
-            .for_each(|matches| {
-                println!("{} matched {} times", matches.path.as_path().to_str().unwrap(), matches.count);
-                for m in matches.matches {
-                    println!("{}:{}", m.number, m.line.trim_right());
-                }
-                println!();
-            })
+            .filter(|m| m.has_matches())
+            .map(|m| display::MatchDisplay::new(m))
+            .for_each(|m| println!("{}", m));
     }
 }
