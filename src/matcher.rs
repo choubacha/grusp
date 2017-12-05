@@ -16,7 +16,7 @@ pub struct Matches {
 pub struct Match {
     pub number: u32,
     pub line: String,
-    pub capture: String
+    pub captures: Vec<String>
 }
 
 impl Matches {
@@ -39,8 +39,8 @@ impl Matches {
 }
 
 impl Match {
-    fn new(line: String, number: u32, capture: String) -> Match {
-        Match { number, line, capture }
+    fn new(line: String, number: u32, captures: Vec<String>) -> Match {
+        Match { number, line, captures }
     }
 }
 
@@ -55,9 +55,12 @@ pub fn find_matches(path: &Path, regex: &Regex) -> std::io::Result<Matches> {
         let mut line = String::new();
         match reader.read_line(&mut line) {
             Ok(size) if size > 0 => {
-                if regex.is_match(&line) {
-                    let caps = regex.captures(line).unwrap();
-                    matches.add(Match::new(line, line_number, caps.get(0).unwrap().as_str()));
+                    if regex.is_match(&line) {
+                    let mut captures: Vec<String> = Vec::new();
+                    for caps in regex.captures_iter(&line) {
+                        captures.push(caps.get(0).map_or(String::new(), |m| m.as_str().to_string()))
+                    }
+                    matches.add(Match::new(line, line_number, captures));
                 }
             },
             _ => break,
@@ -77,7 +80,7 @@ mod tests {
         let path = Path::new("./src/main.rs");
         let mut matches = Matches::from_path(path);
         assert!(!matches.has_matches());
-        matches.add(Match::new("some line".to_string(), 10));
+        matches.add(Match::new("some line".to_string(), 10, vec!["some".to_string()]));
         assert!(matches.has_matches());
     }
 
@@ -86,7 +89,7 @@ mod tests {
         let path = Path::new("./src/main.rs");
         let mut matches = Matches::from_path(path);
         assert_eq!(matches.count, 0);
-        matches.add(Match::new("some line".to_string(), 10));
+        matches.add(Match::new("some line".to_string(), 10, vec!["some".to_string()]));
         assert_eq!(matches.count, 1);
     }
 
