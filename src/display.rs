@@ -13,7 +13,7 @@ pub struct MatchesDisplay {
 
 impl<'a> MatchDisplay<'a> {
     fn prefix_fmt(&self) -> ColoredString {
-        self.match_to_display.number.to_string().bright_yellow()
+        self.match_to_display.number.to_string().yellow()
     }
 
     fn line_fmt(&self) -> String {
