@@ -1,27 +1,49 @@
-use matcher::Matches;
+use matcher::{Matches, Match};
 use std::fmt;
+use colored::*;
 
-pub struct MatchDisplay {
+// MatchDisplay to format a single Match
+pub struct MatchDisplay<'a> {
+    match_to_display: &'a Match
+}
+// MatchesDisplay for format a result set of MatchDisplay
+pub struct MatchesDisplay {
     matches: Matches
 }
 
-impl MatchDisplay {
-    pub fn new(matches: Matches) -> MatchDisplay {
-        MatchDisplay { matches: matches }
+impl<'a> MatchDisplay<'a> {
+    pub fn new(match_to_display: &'a Match) -> MatchDisplay {
+        MatchDisplay { match_to_display: match_to_display }
     }
 }
 
-impl fmt::Display for MatchDisplay {
+impl MatchesDisplay {
+    pub fn new(matches: Matches) -> MatchesDisplay {
+        MatchesDisplay { matches: matches }
+    }
+}
+
+impl<'a> fmt::Display for MatchDisplay<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "{} matched {} times",
-                 self.matches.path.as_path().to_str().unwrap(),
-                 self.matches.count)?;
-        for m in &self.matches.matches {
-            writeln!(f, "{}:{}", m.number, m.line.trim_right())?;
-        }
+        writeln!(f, "{}:{}", self.match_to_display.number.to_string().bright_yellow(), self.match_to_display.line.trim_right())?;
         Ok(())
     }
 }
+
+impl fmt::Display for MatchesDisplay {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "{} matched {} times",
+                 self.matches.path.as_path().to_str().unwrap().bright_green(),
+                 self.matches.count.to_string().bright_yellow())?;
+
+        for m in &self.matches.matches {
+            write!(f, "{}", MatchDisplay::new(m));
+        }
+
+        Ok(())
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
