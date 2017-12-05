@@ -38,9 +38,7 @@ impl Matches {
 }
 
 impl Match {
-    fn new(line: String, number: u32) -> Match {
-        Match { number: number, line: line }
-    }
+    fn new(line: String, number: u32) -> Match { Match { number, line } }
 }
 
 pub fn find_matches(path: &Path, regex: &Regex) -> std::io::Result<Matches> {
@@ -48,7 +46,7 @@ pub fn find_matches(path: &Path, regex: &Regex) -> std::io::Result<Matches> {
     let mut reader = BufReader::new(handle);
 
     let mut matches = Matches::from_path(path);
-    let mut line_number = 0;
+    let mut line_number = 1;
 
     loop {
         let mut line = String::new();

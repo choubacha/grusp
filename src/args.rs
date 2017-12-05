@@ -23,7 +23,7 @@ fn get_regex(regex: &str) -> Result<Regex, ArgError> {
 }
 
 pub fn get_opts() -> Result<Opts, ArgError> {
-    let matches = clap_app!(myapp =>
+    let matches = clap_app!(grusp =>
         (author: "Kevin C. <chewbacha@gmail.com>")
         (about: "Searches with regex through files. For fun!")
         (@arg REGEX: +required "The pattern that should be matched")
