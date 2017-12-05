@@ -3,6 +3,7 @@ extern crate clap;
 extern crate glob;
 extern crate regex;
 extern crate rayon;
+extern crate colored;
 
 mod matcher;
 mod args;
@@ -39,6 +40,6 @@ fn main() {
 fn match_file(path: PathBuf, opts: &args::Opts) {
     let matches = matcher::find_matches(path.as_path(), &opts.regex).expect("Could not parse file");
     if matches.has_matches() {
-        println!("{}", display::MatchDisplay::new(matches));
+        println!("{}", display::MatchesDisplay::new(matches));
     }
 }

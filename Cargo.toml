@@ -7,4 +7,5 @@ authors = ["Kevin Choubacha <kchoubacha@weedmaps.com>"]
 clap = "2.27"
 regex = "0.2"
 glob = "0.2"
+colored = "1.6"
 rayon = "0.9"

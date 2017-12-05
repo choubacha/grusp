@@ -16,6 +16,7 @@ pub struct Matches {
 pub struct Match {
     pub number: u32,
     pub line: String,
+    pub capture: String
 }
 
 impl Matches {
@@ -38,7 +39,9 @@ impl Matches {
 }
 
 impl Match {
-    fn new(line: String, number: u32) -> Match { Match { number, line } }
+    fn new(line: String, number: u32, capture: String) -> Match {
+        Match { number, line, capture }
+    }
 }
 
 pub fn find_matches(path: &Path, regex: &Regex) -> std::io::Result<Matches> {
@@ -53,7 +56,8 @@ pub fn find_matches(path: &Path, regex: &Regex) -> std::io::Result<Matches> {
         match reader.read_line(&mut line) {
             Ok(size) if size > 0 => {
                 if regex.is_match(&line) {
-                    matches.add(Match::new(line, line_number));
+                    let caps = regex.captures(line).unwrap();
+                    matches.add(Match::new(line, line_number, caps.get(0).unwrap().as_str()));
                 }
             },
             _ => break,
