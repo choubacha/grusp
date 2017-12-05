@@ -2,18 +2,21 @@ use std::path::PathBuf;
 use std::io::Result;
 
 pub fn recurse(path: PathBuf) -> Result<Vec<PathBuf>>{
+    let mut files = Vec::new();
+    recurse_down(path, &mut files)?;
+    Ok(files)
+}
+
+fn recurse_down(path: PathBuf, files: &mut Vec<PathBuf>) -> Result<()> {
     if path.is_dir() {
-        let mut files = Vec::new();
         let entries = path.read_dir()?;
         for entry in entries {
-            recurse(entry?.path())?
-                .into_iter()
-                .for_each(|path| files.push(path.to_owned()));
+            recurse_down(entry?.path(), files)?
         }
-
-        Ok(files)
+        Ok(())
     } else {
-        Ok(vec![path.to_owned()])
+        files.push(path.to_owned());
+        Ok(())
     }
 }
 
