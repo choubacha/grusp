@@ -4,6 +4,7 @@ use regex::{Regex};
 pub struct Opts {
     pub regex: Regex,
     pub queries: Vec<String>,
+    pub is_concurrent: bool,
 }
 
 #[derive(Debug)]
@@ -26,13 +27,15 @@ pub fn get_opts() -> Result<Opts, ArgError> {
     let matches = clap_app!(grusp =>
         (author: "Kevin C. <chewbacha@gmail.com>")
         (about: "Searches with regex through files. For fun!")
+        (@arg unthreaded: --unthreaded "The tool runs in a single thread")
         (@arg REGEX: +required "The pattern that should be matched")
         (@arg PATTERN: ... "The files to search")
     ).get_matches();
 
     let regex = matches.value_of("REGEX").expect("Regex required!");
     let queries = matches.values_of("PATTERN").unwrap().map(|p| p.to_owned()).collect();
-    Ok(Opts { regex: get_regex(regex)?, queries: queries })
+    let is_concurrent = matches.occurrences_of("unthreaded") != 1;
+    Ok(Opts { regex: get_regex(regex)?, queries: queries, is_concurrent })
 }
 
 #[cfg(test)]
