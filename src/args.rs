@@ -3,7 +3,7 @@ use regex::{Regex};
 
 pub struct Opts {
     pub regex: Regex,
-    pub queries: Vec<String>,
+    pub queries: Option<Vec<String>>,
     pub is_concurrent: bool,
 }
 
@@ -33,9 +33,11 @@ pub fn get_opts() -> Result<Opts, ArgError> {
     ).get_matches();
 
     let regex = matches.value_of("REGEX").expect("Regex required!");
-    let queries = matches.values_of("PATTERN").unwrap().map(|p| p.to_owned()).collect();
+    let queries = matches.values_of("PATTERN").map(|queries| {
+        queries.map(|p| p.to_owned()).collect()
+    });
     let is_concurrent = matches.occurrences_of("unthreaded") != 1;
-    Ok(Opts { regex: get_regex(regex)?, queries: queries, is_concurrent })
+    Ok(Opts { regex: get_regex(regex)?, queries, is_concurrent })
 }
 
 #[cfg(test)]
