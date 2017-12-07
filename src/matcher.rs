@@ -1,22 +1,24 @@
 use std;
 use std::path::{PathBuf, Path};
 use std::io::prelude::*;
-use std::io::BufReader;
-use std::fs::File;
 use regex::Regex;
 
-#[derive(Debug)]
 pub struct Matches {
-    pub path: PathBuf,
+    pub path: Option<PathBuf>,
     pub count: u32,
     pub matches: Vec<Match>,
 }
 
-#[derive(Debug)]
 pub struct Match {
     pub number: u32,
     pub line: String,
-    pub captures: Vec<String>
+    pub captures: Vec<Capture>,
+}
+
+pub struct Capture {
+    pub start: usize,
+    pub end: usize,
+    pub value: String,
 }
 
 impl Matches {
@@ -24,9 +26,13 @@ impl Matches {
         self.matches.len() > 0
     }
 
-    fn from_path(path: &Path) -> Self {
+    pub fn add_path(self, path: &Path) -> Self {
+        Matches { path: Some(path.to_owned()), .. self }
+    }
+
+    fn new() -> Self {
         Matches {
-            path: path.to_owned(),
+            path: None,
             count: 0,
             matches: Vec::new(),
         }
@@ -39,28 +45,28 @@ impl Matches {
 }
 
 impl Match {
-    fn new(line: String, number: u32, captures: Vec<String>) -> Match {
+    fn new(line: String, number: u32, captures: Vec<Capture>) -> Match {
         Match { number, line, captures }
     }
 }
 
-pub fn find_matches(path: &Path, regex: &Regex) -> std::io::Result<Matches> {
-    let handle = File::open(path)?;
-    let mut reader = BufReader::new(handle);
-
-    let mut matches = Matches::from_path(path);
+pub fn find_matches<T: BufRead>(reader: &mut T, regex: &Regex) -> std::io::Result<Matches> {
+    let mut matches = Matches::new();
     let mut line_number = 1;
 
     loop {
         let mut line = String::new();
         match reader.read_line(&mut line) {
             Ok(size) if size > 0 => {
-                    if regex.is_match(&line) {
-                    let mut captures: Vec<String> = Vec::new();
-                    for caps in regex.captures_iter(&line) {
-                        captures.push(caps.get(0).map_or(String::new(), |m| m.as_str().to_string()))
-                    }
-                    matches.add(Match::new(line, line_number, captures));
+                let cap_matches = regex.captures_iter(&line);
+                let captures: Vec<Capture> = cap_matches
+                    .map(|caps| caps.get(0))
+                    .filter(|m| m.is_some())
+                    .map(|m| m.unwrap())
+                    .map(|m| Capture { start: m.start(), end: m.end(), value: m.as_str().to_string() })
+                    .collect();
+                if captures.len() > 0 {
+                    matches.add(Match::new(line.to_string(), line_number, captures));
                 }
             },
             _ => break,
@@ -77,31 +83,57 @@ mod tests {
 
     #[test]
     fn matches_knows_it_has_matches() {
-        let path = Path::new("./src/main.rs");
-        let mut matches = Matches::from_path(path);
+        let mut matches = Matches::new();
         assert!(!matches.has_matches());
-        matches.add(Match::new("some line".to_string(), 10, vec!["some".to_string()]));
+        matches.add(
+            Match::new("some line".to_string(),
+                           10,
+                           vec![Capture { start: 0, end: 1, value: "some".to_string() }]
+            )
+        );
         assert!(matches.has_matches());
     }
 
     #[test]
     fn matches_tracks_count() {
-        let path = Path::new("./src/main.rs");
-        let mut matches = Matches::from_path(path);
+        let mut matches = Matches::new();
         assert_eq!(matches.count, 0);
-        matches.add(Match::new("some line".to_string(), 10, vec!["some".to_string()]));
+        matches.add(
+            Match::new("some line".to_string(),
+                       10,
+                       vec![Capture { start: 0, end: 1, value: "some".to_string() }]
+            )
+        );
         assert_eq!(matches.count, 1);
+    }
+
+    #[test]
+    fn matches_can_add_path() {
+        let path = Path::new("./src/main.rs");
+        let matches = Matches::new().add_path(path);
+        assert_eq!(matches.path, Some(path.to_owned()));
     }
 
     #[test]
     fn find_main_rs() {
         let reg = Regex::new(r"fn\s+main").unwrap();
-        let path = Path::new("./src/main.rs");
-        let matches = find_matches(path,&reg).unwrap();
-        assert_eq!(matches.path, path);
+        use std::io::Cursor;
+        let mut buf_read = Cursor::new("some text\nfn    main() {}\nhello");
+        let matches = find_matches(&mut buf_read, &reg).unwrap();
+        assert_eq!(matches.path, None);
         assert_eq!(matches.count, 1);
         assert_eq!(matches.matches.len(), 1);
         assert!(reg.is_match(&matches.matches[0].line));
         assert!(matches.has_matches());
+    }
+
+    #[test]
+    fn finds_all_the_captures() {
+        let reg = Regex::new(r"test").unwrap();
+        use std::io::Cursor;
+        let mut buf_read = Cursor::new("test a test b test");
+        let matches = find_matches(&mut buf_read, &reg).unwrap();
+        assert!(matches.has_matches());
+        assert_eq!(matches.matches[0].captures[0].value, "test".to_string());
     }
 }
