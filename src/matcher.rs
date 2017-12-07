@@ -128,6 +128,18 @@ mod tests {
     }
 
     #[test]
+    fn it_tracks_the_line_numbers_from_one() {
+        let reg = Regex::new(r"test").unwrap();
+        use std::io::Cursor;
+        let mut buf_read = Cursor::new("test\nnot\ntest");
+        let matches = find_matches(&mut buf_read, &reg).unwrap();
+        assert_eq!(matches.count, 2);
+        assert_eq!(matches.matches.len(), 2);
+        assert_eq!(matches.matches[0].number, 1);
+        assert_eq!(matches.matches[1].number, 3);
+    }
+
+    #[test]
     fn finds_all_the_captures() {
         let reg = Regex::new(r"test").unwrap();
         use std::io::Cursor;
