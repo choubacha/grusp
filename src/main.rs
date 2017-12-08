@@ -58,6 +58,6 @@ fn match_file(path: PathBuf, opts: &args::Opts) {
         .expect("Could not parse file")
         .add_path(&path);
     if matches.has_matches() {
-        println!("{}", display::MatchesDisplay::new(matches));
+        println!("{}", display::MatchesDisplay::new(matches).color(opts.is_colored));
     }
 }

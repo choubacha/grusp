@@ -7,14 +7,17 @@ or ack or ag but simply be a test bed for developing and learning rust.
 ### usage
 
 ```
+Kevin C. <chewbacha@gmail.com>
 Searches with regex through files. For fun!
 
 USAGE:
-    grusp <REGEX> [PATTERN]...
+    grusp [FLAGS] <REGEX> [PATTERN]...
 
 FLAGS:
-    -h, --help       Prints help information
-    -V, --version    Prints version information
+    -h, --help          Prints help information
+        --nocolor       Output is not colored
+        --unthreaded    The tool runs in a single thread
+    -V, --version       Prints version information
 
 ARGS:
     <REGEX>         The pattern that should be matched
