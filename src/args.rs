@@ -5,6 +5,7 @@ pub struct Opts {
     pub regex: Regex,
     pub queries: Option<Vec<String>>,
     pub is_concurrent: bool,
+    pub is_colored: bool,
 }
 
 #[derive(Debug)]
@@ -28,16 +29,18 @@ pub fn get_opts() -> Result<Opts, ArgError> {
         (author: "Kevin C. <chewbacha@gmail.com>")
         (about: "Searches with regex through files. For fun!")
         (@arg unthreaded: --unthreaded "The tool runs in a single thread")
+        (@arg notcolored: --nocolor "Output is not colored")
         (@arg REGEX: +required "The pattern that should be matched")
         (@arg PATTERN: ... "The files to search")
     ).get_matches();
 
     let regex = matches.value_of("REGEX").expect("Regex required!");
+    let is_colored = matches.occurrences_of("notcolored") == 0;
     let queries = matches.values_of("PATTERN").map(|queries| {
         queries.map(|p| p.to_owned()).collect()
     });
     let is_concurrent = matches.occurrences_of("unthreaded") != 1;
-    Ok(Opts { regex: get_regex(regex)?, queries, is_concurrent })
+    Ok(Opts { regex: get_regex(regex)?, queries, is_concurrent, is_colored })
 }
 
 #[cfg(test)]
