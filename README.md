@@ -7,17 +7,21 @@ or ack or ag but simply be a test bed for developing and learning rust.
 ### usage
 
 ```
-Kevin C. <chewbacha@gmail.com>
+$ target/debug/grusp --help
+Grusp
+Kevin C. <chewbacha@gmail.com>; Charlie K
 Searches with regex through files. For fun!
 
 USAGE:
     grusp [FLAGS] <REGEX> [PATTERN]...
 
 FLAGS:
-    -h, --help          Prints help information
-        --nocolor       Output is not colored
-        --unthreaded    The tool runs in a single thread
-    -V, --version       Prints version information
+    -s, --case-sensitive    Regex is matched case sensitively
+    -h, --help              Prints help information
+    -i, --ignore-case       Regex is matched case insensitively
+        --nocolor           Output is not colored
+        --unthreaded        Runs in a single thread
+    -V, --version           Prints version information
 
 ARGS:
     <REGEX>         The pattern that should be matched
