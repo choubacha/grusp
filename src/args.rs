@@ -32,10 +32,51 @@ fn get_regex(regex: &str, case_insensitive: bool) -> Result<Regex, ArgError> {
     Ok(regex)
 }
 
+fn help_examples() -> &'static str {
+    return "EXAMPLES:
+
+- Use grusp to search from STDIN
+
+    $ history | grusp docker
+
+- Find all instances of the literal string 'fn' in the current directory
+
+    $ grusp fn .
+
+- Find all integers between 0-9 in files in the current directory
+
+    $ grusp [0-9] .
+
+- Find all strings that have 'fn' with a open parentheses and everything between in the current directory
+
+    $ grusp \'fn.*\\(\' .
+
+- Find all strings that have 'fn' or 'FN', ignoring case. This option is incompatible with '-s'.
+
+    $ grusp -i fn .
+
+- Find all strings that have 'fn' only with strict case. This option is incompatible with '-i'.
+
+    $ grusp -s fn .
+
+- Find all strings that have 'fn', using un-colored output. This can be used for an extremely small
+speed boost, or compatibility with terminals without ANSI Color support.
+
+    $ grusp --nocolor fn .
+
+- Find all strings that have 'fn', run on a single thread. By default grusp will attempt to use multiple
+threads to speed up the search process. If this is un-desired in your environment, set the --unthreaded flag
+
+    $ grusp --unthreaded fn .
+";
+}
+
 pub fn get_opts() -> Result<Opts, ArgError> {
-    use clap::{Arg, App};
+    use clap::{Arg, App, AppSettings};
     let matches = App::new("Grusp")
-        .author("Kevin C. <chewbacha@gmail.com>; Charlie K")
+        .setting(AppSettings::ArgRequiredElseHelp)
+        .after_help(help_examples())
+        .author("Kevin C. <chewbacha@gmail.com>; Charlie K. <bringking@gmail.com>")
         .about("Searches with regex through files. For fun!")
         .arg(
             Arg::with_name("case-sensitive")
@@ -61,14 +102,17 @@ pub fn get_opts() -> Result<Opts, ArgError> {
                 .index(1)
                 .value_name("REGEX")
                 .required(true)
-                .help("The pattern that should be matched"),
+                .help("The pattern that should be matched. This can be any valid Perl-style
+Regular expression, with a few caveats. See the \
+Rust Regex documentation \
+for detailed information https://doc.rust-lang.org/regex/regex/index.html."),
         )
         .arg(
             Arg::with_name("PATTERN")
                 .index(2)
                 .multiple(true)
                 .value_name("PATTERN")
-                .help("The files to search"),
+                .help("The files to search. This is optional and not used if grusp is searching from stdin"),
         )
         .get_matches();
 
