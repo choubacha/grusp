@@ -16,7 +16,11 @@ pub struct MatchesDisplay {
 impl<'a> MatchDisplay<'a> {
     fn prefix_fmt(&self) -> String {
         if self.is_colored {
-            self.match_to_display.number.to_string().yellow().to_string()
+            self.match_to_display
+                .number
+                .to_string()
+                .yellow()
+                .to_string()
         } else {
             self.match_to_display.number.to_string()
         }
@@ -43,7 +47,7 @@ impl<'a> MatchDisplay<'a> {
     pub fn new(match_to_display: &'a Match, parent: &MatchesDisplay) -> MatchDisplay<'a> {
         MatchDisplay {
             match_to_display: match_to_display,
-            is_colored: parent.is_colored
+            is_colored: parent.is_colored,
         }
     }
 }
@@ -56,7 +60,7 @@ impl MatchesDisplay {
         }
     }
     pub fn color(self, is_colored: bool) -> Self {
-        Self { is_colored, .. self }
+        Self { is_colored, ..self }
     }
 }
 
@@ -78,7 +82,11 @@ impl fmt::Display for MatchesDisplay {
             };
         }
         if self.is_colored {
-            writeln!(f, "matched {} times", self.matches.count.to_string().yellow())?;
+            writeln!(
+                f,
+                "matched {} times",
+                self.matches.count.to_string().yellow()
+            )?;
         } else {
             writeln!(f, "matched {} times", self.matches.count.to_string())?;
         }
@@ -103,15 +111,28 @@ mod tests {
         let m = Matches {
             count: 12,
             path: Some(Path::new("./path/to/something").to_owned()),
-            matches: vec![Match { number: 23, line: "some text line".to_string(), captures: vec![Capture { start: 5, end: 9, value: "text".to_string() }]  }],
+            matches: vec![
+                Match {
+                    number: 23,
+                    line: "some text line".to_string(),
+                    captures: vec![
+                        Capture {
+                            start: 5,
+                            end: 9,
+                            value: "text".to_string(),
+                        },
+                    ],
+                },
+            ],
         };
         assert_eq!(
             format!("{}", MatchesDisplay::new(m).color(false)),
-            format!("{path} matched {count} times\n{line_number}:some {capture} line\n",
-                    path = "./path/to/something".to_string(),
-                    count = 12.to_string(),
-                    line_number = 23.to_string(),
-                    capture = "text".to_string()
+            format!(
+                "{path} matched {count} times\n{line_number}:some {capture} line\n",
+                path = "./path/to/something".to_string(),
+                count = 12.to_string(),
+                line_number = 23.to_string(),
+                capture = "text".to_string()
             )
         )
     }
@@ -121,15 +142,28 @@ mod tests {
         let m = Matches {
             count: 12,
             path: Some(Path::new("./path/to/something").to_owned()),
-            matches: vec![Match { number: 23, line: "some text line".to_string(), captures: vec![Capture { start: 5, end: 9, value: "text".to_string() }]  }],
+            matches: vec![
+                Match {
+                    number: 23,
+                    line: "some text line".to_string(),
+                    captures: vec![
+                        Capture {
+                            start: 5,
+                            end: 9,
+                            value: "text".to_string(),
+                        },
+                    ],
+                },
+            ],
         };
         assert_eq!(
             format!("{}", MatchesDisplay::new(m)),
-            format!("{path} matched {count} times\n{line_number}:some {capture} line\n",
-                    path = "./path/to/something".to_string().bright_green(),
-                    count = 12.to_string().yellow(),
-                    line_number = 23.to_string().yellow(),
-                    capture = "text".to_string().black().on_yellow()
+            format!(
+                "{path} matched {count} times\n{line_number}:some {capture} line\n",
+                path = "./path/to/something".to_string().bright_green(),
+                count = 12.to_string().yellow(),
+                line_number = 23.to_string().yellow(),
+                capture = "text".to_string().black().on_yellow()
             )
         )
     }
@@ -139,14 +173,27 @@ mod tests {
         let m = Matches {
             count: 12,
             path: None,
-            matches: vec![Match { number: 23, line: "some text line".to_string(), captures: vec![Capture { start: 5, end: 9, value: "text".to_string() }]  }],
+            matches: vec![
+                Match {
+                    number: 23,
+                    line: "some text line".to_string(),
+                    captures: vec![
+                        Capture {
+                            start: 5,
+                            end: 9,
+                            value: "text".to_string(),
+                        },
+                    ],
+                },
+            ],
         };
         assert_eq!(
             format!("{}", MatchesDisplay::new(m)),
-            format!("matched {count} times\n{line_number}:some {capture} line\n",
-                    count = 12.to_string().yellow(),
-                    line_number = 23.to_string().yellow(),
-                    capture = "text".to_string().black().on_yellow()
+            format!(
+                "matched {count} times\n{line_number}:some {capture} line\n",
+                count = 12.to_string().yellow(),
+                line_number = 23.to_string().yellow(),
+                capture = "text".to_string().black().on_yellow()
             )
         )
     }
