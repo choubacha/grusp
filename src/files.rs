@@ -25,8 +25,12 @@ mod tests {
         let mut files = Vec::new();
         recurse(path.to_owned(), &mut files).unwrap();
         assert_eq!(files.len(), 2);
-        assert!(files.contains(&Path::new("./example_dir/sub_dir/sub-example-1.txt").to_owned()));
-        assert!(!files.contains(&Path::new("./example_dir/example-1.txt").to_owned()));
+        assert!(files.contains(
+            &Path::new("./example_dir/sub_dir/sub-example-1.txt").to_owned(),
+        ));
+        assert!(!files.contains(
+            &Path::new("./example_dir/example-1.txt").to_owned(),
+        ));
     }
 
     #[test]
@@ -35,8 +39,12 @@ mod tests {
         let mut files = Vec::new();
         recurse(path.to_owned(), &mut files).unwrap();
         assert_eq!(files.len(), 4);
-        assert!(files.contains(&Path::new("./example_dir/sub_dir/sub-example-1.txt").to_owned()));
-        assert!(files.contains(&Path::new("./example_dir/example-1.txt").to_owned()));
+        assert!(files.contains(
+            &Path::new("./example_dir/sub_dir/sub-example-1.txt").to_owned(),
+        ));
+        assert!(files.contains(
+            &Path::new("./example_dir/example-1.txt").to_owned(),
+        ));
     }
 
     #[test]
