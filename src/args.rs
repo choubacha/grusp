@@ -32,8 +32,7 @@ fn get_regex(regex: &str, case_insensitive: bool) -> Result<Regex, ArgError> {
     Ok(regex)
 }
 
-fn help_examples() -> &'static str {
-    return "EXAMPLES:
+const EXAMPLES: &'static str = "EXAMPLES:
 
 - Use grusp to search from STDIN
 
@@ -69,13 +68,12 @@ threads to speed up the search process. If this is un-desired in your environmen
 
     $ grusp --unthreaded fn .
 ";
-}
 
 pub fn get_opts() -> Result<Opts, ArgError> {
     use clap::{Arg, App, AppSettings};
     let matches = App::new("Grusp")
         .setting(AppSettings::ArgRequiredElseHelp)
-        .after_help(help_examples())
+        .after_help(EXAMPLES)
         .author("Kevin C. <chewbacha@gmail.com>; Charlie K. <bringking@gmail.com>")
         .about("Searches with regex through files. For fun!")
         .arg(
