@@ -4,6 +4,7 @@ use regex::{Regex, RegexBuilder};
 pub struct Opts {
     pub regex: Regex,
     pub queries: Option<Vec<String>>,
+    pub is_count_only: bool,
     pub is_concurrent: bool,
     pub is_colored: bool,
 }
@@ -89,6 +90,9 @@ pub fn get_opts() -> Result<Opts, ArgError> {
                 .conflicts_with("case-sensitive")
                 .help("Regex is matched case insensitively"),
         )
+        .arg(Arg::with_name("count").short("c").long("count").help(
+            "Just counts the matches found",
+        ))
         .arg(Arg::with_name("unthreaded").long("unthreaded").help(
             "Runs in a single thread",
         ))
@@ -122,11 +126,13 @@ for detailed information https://doc.rust-lang.org/regex/regex/index.html."),
     let is_concurrent = !matches.is_present("unthreaded");
     let case_insensitive = matches.is_present("ignore-case") &&
         !matches.is_present("case-sensitive");
+    let is_count_only = matches.is_present("count");
     Ok(Opts {
         regex: get_regex(regex, case_insensitive)?,
         queries,
         is_concurrent,
         is_colored,
+        is_count_only,
     })
 }
 

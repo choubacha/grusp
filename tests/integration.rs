@@ -62,4 +62,26 @@ mod integration {
             .contains("FIND THIS")
             .unwrap();
     }
+
+    #[test]
+    fn it_will_count_matches() {
+        assert_cli::Assert::main_binary()
+            .with_args(
+                &[
+                    "--ignore-case",
+                    "--nocolor",
+                    "--count",
+                    "find",
+                    "./tests/fixtures/example-1.txt",
+                    "./tests/fixtures/example-2.txt",
+                ],
+            )
+            .succeeds()
+            .stdout()
+            .contains("example-1.txt matched 1 time")
+            .stdout()
+            .not()
+            .contains("find")
+            .unwrap();
+    }
 }

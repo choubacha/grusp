@@ -5,7 +5,7 @@ use regex::Regex;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
-pub struct MatchCount {
+pub struct Stats {
     counts: Arc<Mutex<Counts>>,
 }
 
@@ -15,9 +15,9 @@ struct Counts {
     captures: u64,
 }
 
-impl MatchCount {
+impl Stats {
     pub fn new() -> Self {
-        MatchCount { counts: Arc::new(Mutex::new(Counts { total: 0, lines: 0, captures: 0 })) }
+        Stats { counts: Arc::new(Mutex::new(Counts { total: 0, lines: 0, captures: 0 })) }
     }
 
     pub fn add(&self, m: &Matches) -> () {
@@ -137,7 +137,7 @@ mod tests {
     #[test]
     fn can_safely_count_matches() {
         use std::thread;
-        let count = MatchCount::new();
+        let count = Stats::new();
         let mut children = Vec::new();
         for _ in 0..10 {
             let count = count.clone();
