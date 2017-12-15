@@ -11,6 +11,7 @@ pub struct MatchDisplay<'a> {
 pub struct MatchesDisplay {
     matches: Matches,
     is_colored: bool,
+    is_count_only: bool,
 }
 
 impl<'a> MatchDisplay<'a> {
@@ -57,16 +58,20 @@ impl MatchesDisplay {
         MatchesDisplay {
             matches: matches,
             is_colored: true,
+            is_count_only: false,
         }
     }
     pub fn color(self, is_colored: bool) -> Self {
         Self { is_colored, ..self }
     }
+    pub fn count_only(self, is_count_only: bool) -> Self {
+        Self { is_count_only, ..self }
+    }
 }
 
 impl<'a> fmt::Display for MatchDisplay<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "{}:{}", self.prefix_fmt(), self.line_fmt())?;
+        write!(f, "{}:{}", self.prefix_fmt(), self.line_fmt())?;
         Ok(())
     }
 }
@@ -82,17 +87,21 @@ impl fmt::Display for MatchesDisplay {
             };
         }
         if self.is_colored {
-            writeln!(
+            write!(
                 f,
-                "matched {} times",
+                "matched {} time",
                 self.matches.count.to_string().yellow()
             )?;
         } else {
-            writeln!(f, "matched {} times", self.matches.count.to_string())?;
+            write!(f, "matched {} time", self.matches.count.to_string())?;
         }
+        if self.matches.count > 1 { write!(f, "s")?; }
 
-        for m in &self.matches.matches {
-            write!(f, "{}", MatchDisplay::new(m, &self))?;
+        if !self.is_count_only {
+            writeln!(f, "")?;
+            for m in &self.matches.matches {
+                writeln!(f, "{}", MatchDisplay::new(m, &self))?;
+            }
         }
 
         Ok(())
@@ -105,6 +114,52 @@ mod tests {
     use matcher::{Matches, Match, Capture};
     use std::path::Path;
     use super::*;
+
+    #[test]
+    fn it_formats_a_match_with_just_counts() {
+        let m = Matches {
+            count: 12,
+            path: Some(Path::new("./path/to/something").to_owned()),
+            matches: vec![
+                Match {
+                    number: 23,
+                    line: "some text line".to_string(),
+                    captures: vec![
+                        Capture {
+                            start: 5,
+                            end: 9,
+                            value: "text".to_string(),
+                        },
+                    ],
+                },
+            ],
+        };
+        assert_eq!(
+            format!("{}", MatchesDisplay::new(m).count_only(true).color(false)),
+            format!(
+                "{path} matched {count} times",
+                path = "./path/to/something".to_string(),
+                count = 12.to_string(),
+            )
+        )
+    }
+
+    #[test]
+    fn it_formats_a_match_with_just_count_but_single_time() {
+        let m = Matches {
+            count: 1,
+            path: Some(Path::new("./path/to/something").to_owned()),
+            matches: Vec::new(),
+        };
+        assert_eq!(
+            format!("{}", MatchesDisplay::new(m).count_only(true).color(false)),
+            format!(
+                "{path} matched {count} time",
+                path = "./path/to/something",
+                count = "1",
+            )
+        )
+    }
 
     #[test]
     fn it_formats_a_match_without_color() {

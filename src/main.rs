@@ -25,7 +25,7 @@ fn main() {
 
     if let Some(ref queries) = opts.queries {
         let mut files = Vec::new();
-        let match_stats = matcher::MatchCount::new();
+        let stats = matcher::Stats::new();
 
         for query in queries {
             glob(&query)
@@ -39,14 +39,14 @@ fn main() {
 
         if opts.is_concurrent {
             files.into_par_iter().for_each(
-                |p| match_file(p, &opts, &match_stats),
+                |p| match_file(p, &opts, &stats),
             );
         } else {
             files.into_iter().for_each(
-                |p| match_file(p, &opts, &match_stats),
+                |p| match_file(p, &opts, &stats),
             );
         };
-        if match_stats.total() == 0 {
+        if stats.total() == 0 {
             std::process::exit(1);
         }
     } else {
@@ -56,24 +56,26 @@ fn main() {
         let matches =
             matcher::find_matches(&mut reader, &opts.regex).expect("Could not parse file");
         if matches.has_matches() {
-            println!("{}", display::MatchesDisplay::new(matches));
+            println!("{}", display::MatchesDisplay::new(matches).count_only(opts.is_count_only));
         } else {
             std::process::exit(1);
         }
     }
 }
 
-fn match_file(path: PathBuf, opts: &args::Opts, match_stats: &matcher::MatchCount) {
+fn match_file(path: PathBuf, opts: &args::Opts, stats: &matcher::Stats) {
     let handle = File::open(&path).unwrap();
     let mut reader = BufReader::new(handle);
     let matches = matcher::find_matches(&mut reader, &opts.regex)
         .expect("Could not parse file")
         .add_path(&path);
     if matches.has_matches() {
-        match_stats.add(&matches);
+        stats.add(&matches);
         println!(
             "{}",
-            display::MatchesDisplay::new(matches).color(opts.is_colored)
+            display::MatchesDisplay::new(matches)
+                .count_only(opts.is_count_only)
+                .color(opts.is_colored)
         );
     }
 }
