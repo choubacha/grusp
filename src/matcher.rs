@@ -50,7 +50,7 @@ pub struct Matches {
 }
 
 pub struct Match {
-    pub number: u32,
+    pub number: Option<u32>,
     pub line: String,
     pub captures: Vec<Capture>,
 }
@@ -88,13 +88,33 @@ impl Matches {
 }
 
 impl Match {
-    fn new(line: String, number: u32, captures: Vec<Capture>) -> Match {
-        Match {
-            number,
+    fn new(line: String, captures: Vec<Capture>) -> Self {
+        Self {
+            number: None,
             line,
             captures,
         }
     }
+
+    fn line_number(self, number: u32) -> Self {
+        Self { number: Some(number), ..self }
+    }
+}
+
+pub fn find_matches_wo_line_numbers<T: BufRead>(reader: &mut T, regex: &Regex) -> std::io::Result<Matches> {
+    let mut matches = Matches::new();
+    loop {
+        let mut line = String::new();
+        match reader.read_line(&mut line) {
+            Ok(size) if size > 0 => {
+                if let Some(m) = match_line(&line, &regex) {
+                    matches.add(m);
+                }
+            }
+            _ => break,
+        }
+    }
+    Ok(matches)
 }
 
 pub fn find_matches<T: BufRead>(reader: &mut T, regex: &Regex) -> std::io::Result<Matches> {
@@ -105,21 +125,8 @@ pub fn find_matches<T: BufRead>(reader: &mut T, regex: &Regex) -> std::io::Resul
         let mut line = String::new();
         match reader.read_line(&mut line) {
             Ok(size) if size > 0 => {
-                let cap_matches = regex.captures_iter(&line);
-                let captures: Vec<Capture> = cap_matches
-                    .map(|caps| caps.get(0))
-                    .filter(|m| m.is_some())
-                    .map(|m| m.unwrap())
-                    .map(|m| {
-                        Capture {
-                            start: m.start(),
-                            end: m.end(),
-                            value: m.as_str().to_string(),
-                        }
-                    })
-                    .collect();
-                if captures.len() > 0 {
-                    matches.add(Match::new(line.to_string(), line_number, captures));
+                if let Some(m) = match_line(&line, &regex) {
+                    matches.add(m.line_number(line_number));
                 }
             }
             _ => break,
@@ -129,10 +136,47 @@ pub fn find_matches<T: BufRead>(reader: &mut T, regex: &Regex) -> std::io::Resul
     Ok(matches)
 }
 
+fn match_line(line: &str, regex: &Regex) -> Option<Match> {
+    let cap_matches = regex.captures_iter(&line);
+    let captures: Vec<Capture> = cap_matches
+        .map(|caps| caps.get(0))
+        .filter(|m| m.is_some())
+        .map(|m| m.unwrap())
+        .map(|m| {
+            Capture {
+                start: m.start(),
+                end: m.end(),
+                value: m.as_str().to_string(),
+            }
+        })
+        .collect();
+    if captures.len() > 0 {
+        Some(Match::new(line.to_string(), captures))
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use regex::Regex;
+
+    #[test]
+    fn finding_matches_on_a_line() {
+        let reg = Regex::new(r"test").unwrap();
+        let m = match_line("some test line with test matching", &reg).unwrap();
+        assert_eq!(m.number, None);
+        assert_eq!(m.captures.len(), 2);
+        assert_eq!(m.line, "some test line with test matching");
+    }
+
+    #[test]
+    fn finding_matches_on_a_line_returns_none() {
+        let reg = Regex::new(r"asdf").unwrap();
+        let m = match_line("some test line with test matching", &reg);
+        assert!(m.is_none());
+    }
 
     #[test]
     fn can_safely_count_matches() {
@@ -144,7 +188,6 @@ mod tests {
             let mut matches = Matches::new();
             matches.add(Match::new(
                 "some line".to_string(),
-                10,
                 vec![
                     Capture { start: 0, end: 1, value: "some".to_string(), },
                     Capture { start: 0, end: 1, value: "some".to_string(), },
@@ -152,7 +195,6 @@ mod tests {
             ));
             matches.add(Match::new(
                 "some line".to_string(),
-                10,
                 vec![
                     Capture { start: 0, end: 1, value: "some".to_string(), },
                     Capture { start: 0, end: 1, value: "some".to_string(), },
@@ -174,7 +216,6 @@ mod tests {
         assert!(!matches.has_matches());
         matches.add(Match::new(
             "some line".to_string(),
-            10,
             vec![
                 Capture { start: 0, end: 1, value: "some".to_string(), },
             ],
@@ -188,7 +229,6 @@ mod tests {
         assert_eq!(matches.count, 0);
         matches.add(Match::new(
             "some line".to_string(),
-            10,
             vec![
                 Capture { start: 0, end: 1, value: "some".to_string(), },
             ],
@@ -217,6 +257,18 @@ mod tests {
     }
 
     #[test]
+    fn it_can_skip_line_numbers() {
+        let reg = Regex::new(r"test").unwrap();
+        use std::io::Cursor;
+        let mut buf_read = Cursor::new("test\nnot\ntest");
+        let matches = find_matches_wo_line_numbers(&mut buf_read, &reg).unwrap();
+        assert_eq!(matches.count, 2);
+        assert_eq!(matches.matches.len(), 2);
+        assert_eq!(matches.matches[0].number, None);
+        assert_eq!(matches.matches[1].number, None);
+    }
+
+    #[test]
     fn it_tracks_the_line_numbers_from_one() {
         let reg = Regex::new(r"test").unwrap();
         use std::io::Cursor;
@@ -224,8 +276,8 @@ mod tests {
         let matches = find_matches(&mut buf_read, &reg).unwrap();
         assert_eq!(matches.count, 2);
         assert_eq!(matches.matches.len(), 2);
-        assert_eq!(matches.matches[0].number, 1);
-        assert_eq!(matches.matches[1].number, 3);
+        assert_eq!(matches.matches[0].number, Some(1));
+        assert_eq!(matches.matches[1].number, Some(3));
     }
 
     #[test]

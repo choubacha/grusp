@@ -9,6 +9,7 @@ regex = "0.2"
 glob = "0.2"
 colored = "1.6"
 rayon = "0.9"
+atty = "0.2"
 
 [dev-dependencies]
 assert_cli = "0.5"
