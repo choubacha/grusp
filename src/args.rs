@@ -1,5 +1,8 @@
 use regex;
 use regex::{Regex, RegexBuilder};
+use atty;
+use atty::Stream;
+use clap::{Values, Arg, App, AppSettings};
 
 pub struct Opts {
     pub regex: Regex,
@@ -31,6 +34,19 @@ fn get_regex(regex: &str, case_insensitive: bool) -> Result<Regex, ArgError> {
         }
     };
     Ok(regex)
+}
+
+fn collect_queries(values: Option<Values>) -> Option<Vec<String>> {
+    values
+        .map(|queries| { queries.map(|p| p.to_owned()).collect() })
+        .or_else(|| {
+            if atty::is(Stream::Stdin) {
+                // Search in current directory if it's a TTY
+                Some(vec![".".to_string()])
+            } else {
+                None // There is probably a pipe stream coming in
+            }
+        })
 }
 
 const EXAMPLES: &'static str = "EXAMPLES:
@@ -71,7 +87,6 @@ threads to speed up the search process. If this is un-desired in your environmen
 ";
 
 pub fn get_opts() -> Result<Opts, ArgError> {
-    use clap::{Arg, App, AppSettings};
     let matches = App::new("Grusp")
         .setting(AppSettings::ArgRequiredElseHelp)
         .after_help(EXAMPLES)
@@ -120,9 +135,7 @@ for detailed information https://doc.rust-lang.org/regex/regex/index.html."),
 
     let regex = matches.value_of("REGEX").expect("Regex required!");
     let is_colored = !matches.is_present("notcolored");
-    let queries = matches.values_of("PATTERN").map(|queries| {
-        queries.map(|p| p.to_owned()).collect()
-    });
+    let queries = collect_queries(matches.values_of("PATTERN"));
     let is_concurrent = !matches.is_present("unthreaded");
     let case_insensitive = matches.is_present("ignore-case") &&
         !matches.is_present("case-sensitive");

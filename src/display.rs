@@ -15,16 +15,14 @@ pub struct MatchesDisplay {
 }
 
 impl<'a> MatchDisplay<'a> {
-    fn prefix_fmt(&self) -> String {
-        if self.is_colored {
-            self.match_to_display
-                .number
-                .to_string()
-                .yellow()
-                .to_string()
-        } else {
-            self.match_to_display.number.to_string()
-        }
+    fn prefix_fmt(&self) -> Option<String> {
+        self.match_to_display.number.map(|line_number| {
+            if self.is_colored {
+                line_number.to_string().yellow().to_string()
+            } else {
+                line_number.to_string()
+            }
+        })
     }
 
     fn line_fmt(&self) -> String {
@@ -71,7 +69,11 @@ impl MatchesDisplay {
 
 impl<'a> fmt::Display for MatchDisplay<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}:{}", self.prefix_fmt(), self.line_fmt())?;
+        if let Some(prefix) = self.prefix_fmt() {
+            write!(f, "{}:{}", prefix, self.line_fmt())?;
+        } else {
+            write!(f, "{}", self.line_fmt())?;
+        }
         Ok(())
     }
 }
@@ -122,7 +124,7 @@ mod tests {
             path: Some(Path::new("./path/to/something").to_owned()),
             matches: vec![
                 Match {
-                    number: 23,
+                    number: Some(23),
                     line: "some text line".to_string(),
                     captures: vec![
                         Capture {
@@ -168,7 +170,7 @@ mod tests {
             path: Some(Path::new("./path/to/something").to_owned()),
             matches: vec![
                 Match {
-                    number: 23,
+                    number: Some(23),
                     line: "some text line".to_string(),
                     captures: vec![
                         Capture {
@@ -199,7 +201,7 @@ mod tests {
             path: Some(Path::new("./path/to/something").to_owned()),
             matches: vec![
                 Match {
-                    number: 23,
+                    number: Some(23),
                     line: "some text line".to_string(),
                     captures: vec![
                         Capture {
@@ -230,7 +232,7 @@ mod tests {
             path: None,
             matches: vec![
                 Match {
-                    number: 23,
+                    number: Some(23),
                     line: "some text line".to_string(),
                     captures: vec![
                         Capture {
