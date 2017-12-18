@@ -9,7 +9,6 @@ mod matcher;
 mod args;
 mod display;
 mod files;
-use glob::glob;
 use rayon::prelude::*;
 use std::path::PathBuf;
 use std::io::BufReader;
@@ -27,7 +26,7 @@ fn main() {
 
     if let Some(ref queries) = opts.queries {
         let stats = matcher::Stats::new();
-        let files = collect_files(&queries);
+        let files = files::Collecter::new(&queries).max_depth(opts.max_depth).collect();
 
         if opts.is_concurrent {
             files.into_par_iter().for_each(|p| match_file(p, &opts, &stats));
@@ -48,20 +47,6 @@ fn main() {
             std::process::exit(1);
         }
     }
-}
-
-fn collect_files(queries: &Vec<String>) -> Vec<PathBuf> {
-    let mut files = Vec::new();
-    for query in queries {
-        glob(&query)
-            .expect("Glob pattern failed")
-            .filter(|p| p.is_ok())
-            .map(|p| p.expect("An 'ok' file was not found"))
-            .for_each(|p| {
-                files::recurse(p, &mut files).expect("Unknown file error")
-            });
-    }
-    files
 }
 
 fn match_file(path: PathBuf, opts: &args::Opts, stats: &matcher::Stats) {
