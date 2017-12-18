@@ -10,6 +10,7 @@ pub struct Opts {
     pub is_count_only: bool,
     pub is_concurrent: bool,
     pub is_colored: bool,
+    pub max_depth: Option<usize>,
 }
 
 #[derive(Debug)]
@@ -115,6 +116,13 @@ pub fn get_opts() -> Result<Opts, ArgError> {
             "Output is not colored",
         ))
         .arg(
+            Arg::with_name("depth")
+                .takes_value(true)
+                .value_name("NUM")
+                .long("depth")
+                .help("Search up to NUM directories deep")
+        )
+        .arg(
             Arg::with_name("REGEX")
                 .index(1)
                 .value_name("REGEX")
@@ -140,12 +148,14 @@ for detailed information https://doc.rust-lang.org/regex/regex/index.html."),
     let case_insensitive = matches.is_present("ignore-case") &&
         !matches.is_present("case-sensitive");
     let is_count_only = matches.is_present("count");
+    let max_depth: Option<usize> = matches.value_of("depth").map(|v| v.parse().expect("Depth must be an valid integer"));
     Ok(Opts {
         regex: get_regex(regex, case_insensitive)?,
         queries,
         is_concurrent,
         is_colored,
         is_count_only,
+        max_depth,
     })
 }
 
