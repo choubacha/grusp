@@ -7,7 +7,10 @@ pub struct MatchDisplay<'a> {
     match_to_display: &'a Match,
     is_colored: bool,
 }
-// MatchesDisplay for format a result set of MatchDisplay
+
+/// A struct used to wrap the matches that are found and then
+/// display them to a command line interface. It follows a builder pattern
+/// to allow setting things like `is_colored` and `is_count_only`.
 pub struct MatchesDisplay {
     matches: Matches,
     is_colored: bool,

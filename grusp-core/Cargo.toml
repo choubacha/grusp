@@ -1,0 +1,9 @@
+[package]
+name = "grusp-core"
+version = "0.1.0"
+authors = ["Kevin Choubacha <kchoubacha@weedmaps.com>"]
+
+[dependencies]
+regex = "0.2"
+glob = "0.2"
+colored = "1.6"

@@ -5,11 +5,12 @@ authors = ["Kevin Choubacha <kchoubacha@weedmaps.com>"]
 
 [dependencies]
 clap = "2.27"
-regex = "0.2"
-glob = "0.2"
-colored = "1.6"
-rayon = "0.9"
 atty = "0.2"
+rayon = "0.9"
+regex = "0.2"
+grusp-core = { path = "grusp-core" }
+
+[workspace]
 
 [dev-dependencies]
 assert_cli = "0.5"
