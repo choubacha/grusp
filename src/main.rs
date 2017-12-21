@@ -1,19 +1,17 @@
-extern crate clap;
-extern crate glob;
-extern crate regex;
 extern crate rayon;
-extern crate colored;
+extern crate clap;
 extern crate atty;
+extern crate regex;
+extern crate grusp_core;
 
-mod matcher;
-mod args;
-mod display;
-mod files;
+pub mod args;
+
 use rayon::prelude::*;
 use std::path::PathBuf;
 use std::io::BufReader;
 use std::fs::File;
 use std::io::stdin;
+use grusp_core::grusp;
 
 fn main() {
     let opts = match args::get_opts() {
@@ -25,8 +23,8 @@ fn main() {
     };
 
     if let Some(ref queries) = opts.queries {
-        let stats = matcher::Stats::new();
-        let files = files::Collecter::new(&queries).max_depth(opts.max_depth).collect();
+        let stats = grusp::StatCollector::new();
+        let files = grusp::FileCollector::new(&queries).max_depth(opts.max_depth).collect();
 
         if opts.is_concurrent {
             files.into_par_iter().for_each(|p| match_file(p, &opts, &stats));
@@ -39,27 +37,27 @@ fn main() {
     } else {
         let stdin = stdin();
         let mut reader = stdin.lock();
-        let matches = matcher::find_matches_wo_line_numbers(&mut reader, &opts.regex)
+        let matches = grusp::find_matches_wo_line_numbers(&mut reader, &opts.regex)
             .expect("Could not parse file");
         if matches.has_matches() {
-            println!("{}", display::MatchesDisplay::new(matches).count_only(opts.is_count_only));
+            println!("{}", grusp::Display::new(matches).count_only(opts.is_count_only));
         } else {
             std::process::exit(1);
         }
     }
 }
 
-fn match_file(path: PathBuf, opts: &args::Opts, stats: &matcher::Stats) {
+fn match_file(path: PathBuf, opts: &args::Opts, stats: &grusp::StatCollector) {
     let handle = File::open(&path).unwrap();
     let mut reader = BufReader::new(handle);
-    let matches = matcher::find_matches(&mut reader, &opts.regex)
+    let matches = grusp::find_matches(&mut reader, &opts.regex)
         .expect("Could not parse file")
         .add_path(&path);
     if matches.has_matches() {
         stats.add(&matches);
         println!(
             "{}",
-            display::MatchesDisplay::new(matches)
+            grusp::Display::new(matches)
                 .count_only(opts.is_count_only)
                 .color(opts.is_colored)
         );

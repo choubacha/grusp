@@ -17,7 +17,7 @@ struct Counts {
 
 impl Stats {
     pub fn new() -> Self {
-        Stats { counts: Arc::new(Mutex::new(Counts { total: 0, lines: 0, captures: 0 })) }
+        Self { counts: Arc::new(Mutex::new(Counts { total: 0, lines: 0, captures: 0 })) }
     }
 
     pub fn add(&self, m: &Matches) -> () {
@@ -66,11 +66,9 @@ impl Matches {
         self.matches.len() > 0
     }
 
-    pub fn add_path(self, path: &Path) -> Self {
-        Matches {
-            path: Some(path.to_owned()),
-            ..self
-        }
+    pub fn add_path(mut self, path: &Path) -> Self {
+        self.path = Some(path.to_owned());
+        self
     }
 
     fn new() -> Self {

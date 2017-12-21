@@ -8,15 +8,58 @@ pub struct Collecter<'a> {
 }
 
 impl<'a> Collecter<'a> {
+    /// Creates a new collector that can find all the files necessary for
+    /// searching the regex against.
+    ///
+    /// ### Examples
+    ///
+    /// ```
+    /// use grusp_core::grusp;
+    /// let queries = vec!["example_dir/**/*.txt".to_string()];
+    /// let collector = grusp::FileCollector::new(&queries);
+    /// ```
     pub fn new(queries: &'a Vec<String>) -> Self {
         Self { queries: &queries, max_depth: None }
     }
 
+    /// Builds the collector to search to a specified max depth. The
+    /// depth is optional. To search all the way use None
+    ///
+    /// ### Examples
+    ///
+    /// *Specifying max_depth*
+    ///
+    /// ```
+    /// use grusp_core::grusp;
+    /// let queries = vec!["example_dir/".to_string()];
+    /// let files = grusp::FileCollector::new(&queries).max_depth(Some(0)).collect();
+    /// assert_eq!(files.len(), 2)
+    /// ```
+    ///
+    /// *Specifying no max_depth*
+    ///
+    /// ```
+    /// use grusp_core::grusp;
+    /// let queries = vec!["example_dir/".to_string()];
+    /// let files = grusp::FileCollector::new(&queries).max_depth(None).collect();
+    /// assert_eq!(files.len(), 4)
+    /// ```
     pub fn max_depth(mut self, max_depth: Option<usize>) -> Self {
         self.max_depth = max_depth;
         self
     }
 
+    /// Consumes the collector and returns a set of paths that it finds while
+    /// searching recursively through the glob queries.
+    ///
+    /// ### Examples
+    ///
+    /// ```
+    /// use grusp_core::grusp;
+    /// let queries = vec!["example_dir/**/*.txt".to_string()];
+    /// let files = grusp::FileCollector::new(&queries).collect();
+    /// assert_eq!(files.len(), 4)
+    /// ```
     pub fn collect(self) -> Vec<PathBuf> {
         let mut files = Vec::new();
         for query in self.queries {
@@ -41,11 +84,10 @@ impl<'a> Collecter<'a> {
             for entry in entries {
                 self.recurse(entry?.path(), files, depth + 1)?
             }
-            Ok(())
         } else {
             files.push(path.to_owned());
-            Ok(())
         }
+        Ok(())
     }
 }
 
