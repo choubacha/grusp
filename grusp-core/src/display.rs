@@ -2,7 +2,8 @@ use matcher::{Matches, Match};
 use std::fmt;
 use colored::*;
 
-// MatchDisplay to format a single Match
+/// MatchDisplay to format a single Match
+#[derive(Debug)]
 pub struct MatchDisplay<'a> {
     match_to_display: &'a Match,
     is_colored: bool,
@@ -11,6 +12,7 @@ pub struct MatchDisplay<'a> {
 /// A struct used to wrap the matches that are found and then
 /// display them to a command line interface. It follows a builder pattern
 /// to allow setting things like `is_colored` and `is_count_only`.
+#[derive(Debug)]
 pub struct MatchesDisplay {
     matches: Matches,
     is_colored: bool,
@@ -55,6 +57,9 @@ impl<'a> MatchDisplay<'a> {
 }
 
 impl MatchesDisplay {
+    /// So that you can configure how a set of matches should be displayed, you
+    /// can use this wrapper struct. It consumes a `Matches` struct and returns
+    /// a display struct. Use the builder functions to configure.
     pub fn new(matches: Matches) -> MatchesDisplay {
         MatchesDisplay {
             matches: matches,
@@ -62,9 +67,13 @@ impl MatchesDisplay {
             is_count_only: false,
         }
     }
+
+    /// Consumes the display and enables/disables colored output.
     pub fn color(self, is_colored: bool) -> Self {
         Self { is_colored, ..self }
     }
+
+    /// Consumes the display and enables showing just the counts.
     pub fn count_only(self, is_count_only: bool) -> Self {
         Self { is_count_only, ..self }
     }
