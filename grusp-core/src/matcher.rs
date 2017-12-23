@@ -4,11 +4,14 @@ use std::io::prelude::*;
 use regex::Regex;
 use std::sync::{Arc, Mutex};
 
-#[derive(Clone)]
+/// A struct that tallies and maintains an aggregated stats history of matches
+/// even across threads.
+#[derive(Clone, Debug)]
 pub struct Stats {
     counts: Arc<Mutex<Counts>>,
 }
 
+#[derive(Debug)]
 struct Counts {
     total: u64,
     lines: u64,
@@ -16,10 +19,13 @@ struct Counts {
 }
 
 impl Stats {
+    /// Creates a new stat collector struct to tally and keep track of how many
+    /// lines, captures, and files match
     pub fn new() -> Self {
         Self { counts: Arc::new(Mutex::new(Counts { total: 0, lines: 0, captures: 0 })) }
     }
 
+    /// Adds a set of matches for a given file to the stats.
     pub fn add(&self, m: &Matches) -> () {
         if m.has_matches() {
             let mut counts = self.counts.lock().unwrap();
@@ -30,31 +36,37 @@ impl Stats {
         }
     }
 
+    /// Returns the total number of matched files.
     pub fn total(&self) -> u64 {
         self.counts.lock().unwrap().total
     }
 
+    /// Returns the total number of captures.
     pub fn captures(&self) -> u64 {
         self.counts.lock().unwrap().captures
     }
 
+    /// Returns the total number of matched lines.
     pub fn lines(&self) -> u64 {
         self.counts.lock().unwrap().lines
     }
 }
 
+#[derive(Debug)]
 pub struct Matches {
     pub path: Option<PathBuf>,
     pub count: u32,
     pub matches: Vec<Match>,
 }
 
+#[derive(Debug)]
 pub struct Match {
     pub number: Option<u32>,
     pub line: String,
     pub captures: Vec<Capture>,
 }
 
+#[derive(Debug)]
 pub struct Capture {
     pub start: usize,
     pub end: usize,
@@ -99,6 +111,7 @@ impl Match {
     }
 }
 
+/// Finds matches against a bufreader using the available regex. Does not collect line numbers
 pub fn find_matches_wo_line_numbers<T: BufRead>(reader: &mut T, regex: &Regex) -> std::io::Result<Matches> {
     let mut matches = Matches::new();
     loop {
@@ -115,6 +128,7 @@ pub fn find_matches_wo_line_numbers<T: BufRead>(reader: &mut T, regex: &Regex) -
     Ok(matches)
 }
 
+/// Finds matches against a bufreader using the available regex.
 pub fn find_matches<T: BufRead>(reader: &mut T, regex: &Regex) -> std::io::Result<Matches> {
     let mut matches = Matches::new();
     let mut line_number = 1;

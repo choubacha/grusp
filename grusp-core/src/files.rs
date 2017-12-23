@@ -2,6 +2,8 @@ use std::path::PathBuf;
 use std::io::Result;
 use glob::glob;
 
+/// A struct that allows the user to locate a set of files based on configured options.
+#[derive(Debug)]
 pub struct Collecter<'a> {
     queries: &'a Vec<String>,
     max_depth: Option<usize>,
