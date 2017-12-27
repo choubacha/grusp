@@ -56,13 +56,13 @@ impl Stats {
 pub struct Matches {
     pub path: Option<PathBuf>,
     pub count: u32,
-    pub matches: Vec<Match>,
+    pub matches: Vec<Line>,
 }
 
 #[derive(Debug)]
-pub struct Match {
+pub struct Line {
     pub number: Option<u32>,
-    pub line: String,
+    pub value: String,
     pub captures: Vec<Capture>,
 }
 
@@ -91,17 +91,17 @@ impl Matches {
         }
     }
 
-    fn add(&mut self, m: Match) {
+    fn add(&mut self, m: Line) {
         self.count += 1;
         self.matches.push(m);
     }
 }
 
-impl Match {
-    fn new(line: String, captures: Vec<Capture>) -> Self {
+impl Line {
+    fn new(value: String, captures: Vec<Capture>) -> Self {
         Self {
             number: None,
-            line,
+            value,
             captures,
         }
     }
@@ -148,7 +148,7 @@ pub fn find_matches<T: BufRead>(reader: &mut T, regex: &Regex) -> std::io::Resul
     Ok(matches)
 }
 
-fn match_line(line: &str, regex: &Regex) -> Option<Match> {
+fn match_line(line: &str, regex: &Regex) -> Option<Line> {
     let cap_matches = regex.captures_iter(&line);
     let captures: Vec<Capture> = cap_matches
         .map(|caps| caps.get(0))
@@ -163,7 +163,7 @@ fn match_line(line: &str, regex: &Regex) -> Option<Match> {
         })
         .collect();
     if captures.len() > 0 {
-        Some(Match::new(line.to_string(), captures))
+        Some(Line::new(line.to_string(), captures))
     } else {
         None
     }
@@ -180,7 +180,7 @@ mod tests {
         let m = match_line("some test line with test matching", &reg).unwrap();
         assert_eq!(m.number, None);
         assert_eq!(m.captures.len(), 2);
-        assert_eq!(m.line, "some test line with test matching");
+        assert_eq!(m.value, "some test line with test matching");
     }
 
     #[test]
@@ -198,14 +198,14 @@ mod tests {
         for _ in 0..10 {
             let count = count.clone();
             let mut matches = Matches::new();
-            matches.add(Match::new(
+            matches.add(Line::new(
                 "some line".to_string(),
                 vec![
                     Capture { start: 0, end: 1, value: "some".to_string(), },
                     Capture { start: 0, end: 1, value: "some".to_string(), },
                 ],
             ));
-            matches.add(Match::new(
+            matches.add(Line::new(
                 "some line".to_string(),
                 vec![
                     Capture { start: 0, end: 1, value: "some".to_string(), },
@@ -226,7 +226,7 @@ mod tests {
     fn matches_knows_it_has_matches() {
         let mut matches = Matches::new();
         assert!(!matches.has_matches());
-        matches.add(Match::new(
+        matches.add(Line::new(
             "some line".to_string(),
             vec![
                 Capture { start: 0, end: 1, value: "some".to_string(), },
@@ -239,7 +239,7 @@ mod tests {
     fn matches_tracks_count() {
         let mut matches = Matches::new();
         assert_eq!(matches.count, 0);
-        matches.add(Match::new(
+        matches.add(Line::new(
             "some line".to_string(),
             vec![
                 Capture { start: 0, end: 1, value: "some".to_string(), },
@@ -264,7 +264,7 @@ mod tests {
         assert_eq!(matches.path, None);
         assert_eq!(matches.count, 1);
         assert_eq!(matches.matches.len(), 1);
-        assert!(reg.is_match(&matches.matches[0].line));
+        assert!(reg.is_match(&matches.matches[0].value));
         assert!(matches.has_matches());
     }
 

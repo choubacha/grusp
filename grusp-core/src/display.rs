@@ -1,11 +1,11 @@
-use matcher::{Matches, Match};
+use matcher::{Matches, Line};
 use std::fmt;
 use colored::*;
 
 /// MatchDisplay to format a single Match
 #[derive(Debug)]
-pub struct MatchDisplay<'a> {
-    match_to_display: &'a Match,
+pub struct LineDisplay<'a> {
+    match_to_display: &'a Line,
     is_colored: bool,
 }
 
@@ -19,7 +19,7 @@ pub struct MatchesDisplay {
     is_count_only: bool,
 }
 
-impl<'a> MatchDisplay<'a> {
+impl<'a> LineDisplay<'a> {
     fn prefix_fmt(&self) -> Option<String> {
         self.match_to_display.number.map(|line_number| {
             if self.is_colored {
@@ -31,7 +31,7 @@ impl<'a> MatchDisplay<'a> {
     }
 
     fn line_fmt(&self) -> String {
-        let line = &*self.match_to_display.line;
+        let line = &*self.match_to_display.value;
 
         if self.is_colored {
             let mut output = String::new();
@@ -48,8 +48,8 @@ impl<'a> MatchDisplay<'a> {
         }
     }
 
-    pub fn new(match_to_display: &'a Match, parent: &MatchesDisplay) -> MatchDisplay<'a> {
-        MatchDisplay {
+    pub fn new(match_to_display: &'a Line, parent: &MatchesDisplay) -> LineDisplay<'a> {
+        LineDisplay {
             match_to_display: match_to_display,
             is_colored: parent.is_colored,
         }
@@ -79,7 +79,7 @@ impl MatchesDisplay {
     }
 }
 
-impl<'a> fmt::Display for MatchDisplay<'a> {
+impl<'a> fmt::Display for LineDisplay<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if let Some(prefix) = self.prefix_fmt() {
             write!(f, "{}:{}", prefix, self.line_fmt())?;
@@ -114,7 +114,7 @@ impl fmt::Display for MatchesDisplay {
         if !self.is_count_only {
             writeln!(f, "")?;
             for m in &self.matches.matches {
-                writeln!(f, "{}", MatchDisplay::new(m, &self))?;
+                writeln!(f, "{}", LineDisplay::new(m, &self))?;
             }
         }
 
@@ -125,7 +125,7 @@ impl fmt::Display for MatchesDisplay {
 
 #[cfg(test)]
 mod tests {
-    use matcher::{Matches, Match, Capture};
+    use matcher::{Matches, Line, Capture};
     use std::path::Path;
     use super::*;
 
@@ -135,9 +135,9 @@ mod tests {
             count: 12,
             path: Some(Path::new("./path/to/something").to_owned()),
             matches: vec![
-                Match {
+                Line {
                     number: Some(23),
-                    line: "some text line".to_string(),
+                    value: "some text line".to_string(),
                     captures: vec![
                         Capture {
                             start: 5,
@@ -181,9 +181,9 @@ mod tests {
             count: 12,
             path: Some(Path::new("./path/to/something").to_owned()),
             matches: vec![
-                Match {
+                Line {
                     number: Some(23),
-                    line: "some text line".to_string(),
+                    value: "some text line".to_string(),
                     captures: vec![
                         Capture {
                             start: 5,
@@ -212,9 +212,9 @@ mod tests {
             count: 12,
             path: Some(Path::new("./path/to/something").to_owned()),
             matches: vec![
-                Match {
+                Line {
                     number: Some(23),
-                    line: "some text line".to_string(),
+                    value: "some text line".to_string(),
                     captures: vec![
                         Capture {
                             start: 5,
@@ -243,9 +243,9 @@ mod tests {
             count: 12,
             path: None,
             matches: vec![
-                Match {
+                Line {
                     number: Some(23),
-                    line: "some text line".to_string(),
+                    value: "some text line".to_string(),
                     captures: vec![
                         Capture {
                             start: 5,
