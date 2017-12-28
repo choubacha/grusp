@@ -61,7 +61,7 @@ pub struct Matches {
 
 #[derive(Debug)]
 pub struct Line {
-    pub number: Option<u32>,
+    pub number: Option<usize>,
     pub value: String,
     pub captures: Vec<Capture>,
 }
@@ -106,46 +106,75 @@ impl Line {
         }
     }
 
-    fn line_number(self, number: u32) -> Self {
+    fn line_number(self, number: usize) -> Self {
         Self { number: Some(number), ..self }
     }
 }
 
-/// Finds matches against a bufreader using the available regex. Does not collect line numbers
-pub fn find_matches_wo_line_numbers<T: BufRead>(reader: &mut T, regex: &Regex) -> std::io::Result<Matches> {
-    let mut matches = Matches::new();
-    loop {
-        let mut line = String::new();
-        match reader.read_line(&mut line) {
-            Ok(size) if size > 0 => {
-                if let Some(m) = match_line(&line, &regex) {
-                    matches.add(m);
-                }
-            }
-            _ => break,
+/// A struct for accumulating and building the matches.
+struct Matcher<'a> {
+    line_number: usize,
+    matches: Matches,
+    regex: &'a Regex,
+    with_line_numbers: bool,
+}
+
+impl<'a> Matcher<'a> {
+    /// Creates a new matcher with default values
+    fn new(regex: &'a Regex) -> Self {
+        Matcher {
+            line_number: 0,
+            matches: Matches::new(),
+            regex,
+            with_line_numbers: true,
         }
     }
-    Ok(matches)
+
+    /// Toggle the tracking of line numbers. If set to false, the returned matches
+    /// will not include the line numbers. Useful when the buffer is not actually a file.
+    fn with_line_numbers(mut self, w: bool) -> Self {
+        self.with_line_numbers = w;
+        self
+    }
+
+    fn add(&mut self, m: Line) {
+        if self.with_line_numbers {
+            self.matches.add(m.line_number(self.line_number));
+        } else {
+            self.matches.add(m);
+        }
+    }
+
+    fn increment_line_number(&mut self) {
+        self.line_number += 1;
+    }
+
+    /// Mutably consumes the matcher and returns a result with the matches.
+    fn collect<T: BufRead>(mut self, reader: &mut T) -> std::io::Result<Matches> {
+        loop {
+            let mut line = String::new();
+            match reader.read_line(&mut line) {
+                Ok(size) if size > 0 => {
+                    self.increment_line_number();
+                    if let Some(m) = match_line(&line, &self.regex) {
+                        self.add(m);
+                    }
+                }
+                _ => break,
+            }
+        }
+        Ok(self.matches)
+    }
+}
+
+/// Finds matches against a bufreader using the available regex. Does not collect line numbers
+pub fn find_matches_wo_line_numbers<T: BufRead>(mut reader: T, regex: &Regex) -> std::io::Result<Matches> {
+    Matcher::new(&regex).with_line_numbers(false).collect(&mut reader)
 }
 
 /// Finds matches against a bufreader using the available regex.
-pub fn find_matches<T: BufRead>(reader: &mut T, regex: &Regex) -> std::io::Result<Matches> {
-    let mut matches = Matches::new();
-    let mut line_number = 1;
-
-    loop {
-        let mut line = String::new();
-        match reader.read_line(&mut line) {
-            Ok(size) if size > 0 => {
-                if let Some(m) = match_line(&line, &regex) {
-                    matches.add(m.line_number(line_number));
-                }
-            }
-            _ => break,
-        }
-        line_number += 1;
-    }
-    Ok(matches)
+pub fn find_matches<T: BufRead>(mut reader: T, regex: &Regex) -> std::io::Result<Matches> {
+    Matcher::new(&regex).collect(&mut reader)
 }
 
 fn match_line(line: &str, regex: &Regex) -> Option<Line> {
