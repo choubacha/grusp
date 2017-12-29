@@ -67,8 +67,7 @@ impl<'a> Collecter<'a> {
         for query in self.queries {
             glob(&query)
                 .expect("Glob pattern failed")
-                .filter(|p| p.is_ok())
-                .map(|p| p.expect("An 'ok' file was not found"))
+                .filter_map(|p| p.ok())
                 .for_each(|p| {
                     self.recurse(p, &mut files, 0).expect("Unknown file error")
                 });

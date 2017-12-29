@@ -17,6 +17,7 @@ pub struct MatchesDisplay {
     matches: Matches,
     is_colored: bool,
     is_count_only: bool,
+    just_file_names: bool,
 }
 
 impl<'a> LineDisplay<'a> {
@@ -65,7 +66,13 @@ impl MatchesDisplay {
             matches: matches,
             is_colored: true,
             is_count_only: false,
+            just_file_names: false,
         }
+    }
+
+    /// Consumes self and enables/disables displaying just the file names
+    pub fn just_file_names(self, just_file_names: bool) -> Self {
+        Self { just_file_names, ..self }
     }
 
     /// Consumes the display and enables/disables colored output.
@@ -92,28 +99,30 @@ impl<'a> fmt::Display for LineDisplay<'a> {
 
 impl fmt::Display for MatchesDisplay {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut ret = String::new();
+
         if let Some(ref path) = self.matches.path {
             let path = path.as_path().to_str().unwrap_or("");
             if self.is_colored {
-                write!(f, "{} ", path.bright_green())?;
+                ret.push_str(&format!("{} ", path.bright_green()));
             } else {
-                write!(f, "{} ", path)?;
+                ret.push_str(&format!("{} ", path));
             };
         }
-        if self.is_colored {
-            write!(
-                f,
-                "matched {} time",
-                self.matches.count.to_string().yellow()
-            )?;
-        } else {
-            write!(f, "matched {} time", self.matches.count.to_string())?;
+        if self.just_file_names {
+            return write!(f, "{}", ret.trim())
         }
-        if self.matches.count > 1 { write!(f, "s")?; }
+        if self.is_colored {
+            ret.push_str(&format!("matched {} time", self.matches.count.to_string().yellow()));
+        } else {
+            ret.push_str(&format!("matched {} time", self.matches.count.to_string()));
+        }
+        if self.matches.count > 1 { ret.push_str("s"); }
+        write!(f, "{}", ret)?;
 
         if !self.is_count_only {
             writeln!(f, "")?;
-            for m in &self.matches.matches {
+            for m in &self.matches.lines {
                 writeln!(f, "{}", LineDisplay::new(m, &self))?;
             }
         }
@@ -134,7 +143,7 @@ mod tests {
         let m = Matches {
             count: 12,
             path: Some(Path::new("./path/to/something").to_owned()),
-            matches: vec![
+            lines: vec![
                 Line {
                     number: Some(23),
                     value: "some text line".to_string(),
@@ -163,7 +172,7 @@ mod tests {
         let m = Matches {
             count: 1,
             path: Some(Path::new("./path/to/something").to_owned()),
-            matches: Vec::new(),
+            lines: Vec::new(),
         };
         assert_eq!(
             format!("{}", MatchesDisplay::new(m).count_only(true).color(false)),
@@ -180,7 +189,7 @@ mod tests {
         let m = Matches {
             count: 12,
             path: Some(Path::new("./path/to/something").to_owned()),
-            matches: vec![
+            lines: vec![
                 Line {
                     number: Some(23),
                     value: "some text line".to_string(),
@@ -211,7 +220,7 @@ mod tests {
         let m = Matches {
             count: 12,
             path: Some(Path::new("./path/to/something").to_owned()),
-            matches: vec![
+            lines: vec![
                 Line {
                     number: Some(23),
                     value: "some text line".to_string(),
@@ -242,7 +251,7 @@ mod tests {
         let m = Matches {
             count: 12,
             path: None,
-            matches: vec![
+            lines: vec![
                 Line {
                     number: Some(23),
                     value: "some text line".to_string(),
@@ -265,5 +274,55 @@ mod tests {
                 capture = "text".to_string().black().on_yellow()
             )
         )
+    }
+
+    #[test]
+    fn it_prints_just_matching_files() {
+        let m = Matches {
+            count: 12,
+            path: Some(Path::new("./path/to/something").to_owned()),
+            lines: vec![
+                Line {
+                    number: Some(23),
+                    value: "some text line".to_string(),
+                    captures: vec![
+                        Capture {
+                            start: 5,
+                            end: 9,
+                            value: "text".to_string(),
+                        },
+                    ],
+                },
+            ],
+        };
+        assert_eq!(
+            format!("{}", MatchesDisplay::new(m).just_file_names(true)),
+            format!("{path}", path = "./path/to/something".to_string().bright_green())
+        );
+    }
+
+    #[test]
+    fn it_prints_nothing_when_just_file_names_but_no_path() {
+        let m = Matches {
+            count: 12,
+            path: None,
+            lines: vec![
+                Line {
+                    number: Some(23),
+                    value: "some text line".to_string(),
+                    captures: vec![
+                        Capture {
+                            start: 5,
+                            end: 9,
+                            value: "text".to_string(),
+                        },
+                    ],
+                },
+            ],
+        };
+        assert_eq!(
+            format!("{}", MatchesDisplay::new(m).just_file_names(true)),
+            ""
+        );
     }
 }

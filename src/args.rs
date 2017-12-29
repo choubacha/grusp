@@ -11,6 +11,7 @@ pub struct Opts {
     pub is_concurrent: bool,
     pub is_colored: bool,
     pub max_depth: Option<usize>,
+    pub files_with_matches: bool,
 }
 
 #[derive(Debug)]
@@ -115,6 +116,9 @@ pub fn get_opts() -> Result<Opts, ArgError> {
         .arg(Arg::with_name("notcolored").long("nocolor").help(
             "Output is not colored",
         ))
+        .arg(Arg::with_name("files-with-matches").long("files-with-matches").help(
+            "Only print the names of files containing matches, not the matching lines. An empty query will print all files that would be searched.",
+        ))
         .arg(
             Arg::with_name("depth")
                 .takes_value(true)
@@ -149,6 +153,7 @@ for detailed information https://doc.rust-lang.org/regex/regex/index.html."),
         !matches.is_present("case-sensitive");
     let is_count_only = matches.is_present("count");
     let max_depth: Option<usize> = matches.value_of("depth").map(|v| v.parse().expect("Depth must be an valid integer"));
+    let files_with_matches = matches.is_present("files-with-matches");
     Ok(Opts {
         regex: get_regex(regex, case_insensitive)?,
         queries,
@@ -156,6 +161,7 @@ for detailed information https://doc.rust-lang.org/regex/regex/index.html."),
         is_colored,
         is_count_only,
         max_depth,
+        files_with_matches,
     })
 }
 
