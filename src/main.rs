@@ -37,10 +37,19 @@ fn main() {
     } else {
         let stdin = stdin();
         let mut reader = stdin.lock();
-        let matches = grusp::find_matches_wo_line_numbers(&mut reader, &opts.regex)
+        let matches = grusp::Matcher::new(&opts.regex)
+            .keep_lines(!(opts.files_with_matches || opts.is_count_only))
+            .with_line_numbers(false)
+            .collect(&mut reader)
             .expect("Could not parse file");
         if matches.has_matches() {
-            println!("{}", grusp::Display::new(matches).count_only(opts.is_count_only));
+            println!(
+                "{}",
+                grusp::Display::new(matches)
+                    .count_only(opts.is_count_only)
+                    .color(opts.is_colored)
+                    .just_file_names(opts.files_with_matches)
+            );
         } else {
             std::process::exit(1);
         }
@@ -50,7 +59,9 @@ fn main() {
 fn match_file(path: PathBuf, opts: &args::Opts, stats: &grusp::StatCollector) {
     let handle = File::open(&path).unwrap();
     let mut reader = BufReader::new(handle);
-    let matches = grusp::find_matches(&mut reader, &opts.regex)
+    let matches = grusp::Matcher::new(&opts.regex)
+        .keep_lines(!(opts.files_with_matches || opts.is_count_only))
+        .collect(&mut reader)
         .expect("Could not parse file")
         .add_path(&path);
     if matches.has_matches() {
@@ -60,6 +71,7 @@ fn match_file(path: PathBuf, opts: &args::Opts, stats: &grusp::StatCollector) {
             grusp::Display::new(matches)
                 .count_only(opts.is_count_only)
                 .color(opts.is_colored)
+                .just_file_names(opts.files_with_matches)
         );
     }
 }

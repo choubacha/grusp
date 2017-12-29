@@ -30,8 +30,8 @@ impl Stats {
         if m.has_matches() {
             let mut counts = self.counts.lock().unwrap();
             counts.total += 1;
-            counts.lines += m.matches.len() as u64;
-            let capture_count: u64 = m.matches.iter().map(|m| m.captures.len() as u64).sum();
+            counts.lines += m.lines.len() as u64;
+            let capture_count: u64 = m.lines.iter().map(|m| m.captures.len() as u64).sum();
             counts.captures += capture_count;
         }
     }
@@ -56,7 +56,7 @@ impl Stats {
 pub struct Matches {
     pub path: Option<PathBuf>,
     pub count: u32,
-    pub matches: Vec<Line>,
+    pub lines: Vec<Line>,
 }
 
 #[derive(Debug)]
@@ -75,7 +75,7 @@ pub struct Capture {
 
 impl Matches {
     pub fn has_matches(&self) -> bool {
-        self.matches.len() > 0
+        self.count > 0
     }
 
     pub fn add_path(mut self, path: &Path) -> Self {
@@ -87,13 +87,18 @@ impl Matches {
         Matches {
             path: None,
             count: 0,
-            matches: Vec::new(),
+            lines: Vec::new(),
         }
     }
 
     fn add(&mut self, m: Line) {
+        self.increment();
+        self.lines.push(m);
+    }
+
+    #[inline]
+    fn increment(&mut self) {
         self.count += 1;
-        self.matches.push(m);
     }
 }
 
@@ -112,36 +117,65 @@ impl Line {
 }
 
 /// A struct for accumulating and building the matches.
-struct Matcher<'a> {
+#[derive(Debug)]
+pub struct Matcher<'a> {
     line_number: usize,
     matches: Matches,
     regex: &'a Regex,
     with_line_numbers: bool,
+    track_lines: bool,
 }
 
 impl<'a> Matcher<'a> {
     /// Creates a new matcher with default values
-    fn new(regex: &'a Regex) -> Self {
+    pub fn new(regex: &'a Regex) -> Self {
         Matcher {
             line_number: 0,
             matches: Matches::new(),
             regex,
             with_line_numbers: true,
+            track_lines: true,
         }
     }
 
     /// Toggle the tracking of line numbers. If set to false, the returned matches
     /// will not include the line numbers. Useful when the buffer is not actually a file.
-    fn with_line_numbers(mut self, w: bool) -> Self {
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # extern crate regex;
+    /// # extern crate grusp_core;
+    /// # fn main() {
+    /// use grusp_core::grusp::Matcher;
+    /// use std::io::Cursor;
+    ///
+    /// let reg = regex::Regex::new(r"test").unwrap();
+    /// let mut buf_read = Cursor::new("test\nnot\ntest");
+    /// let matches = Matcher::new(&reg).with_line_numbers(false).collect(&mut buf_read).unwrap();
+    /// assert_eq!(matches.lines[0].number, None);
+    /// # }
+    /// ```
+    pub fn with_line_numbers(mut self, w: bool) -> Self {
         self.with_line_numbers = w;
         self
     }
 
+    /// Toggles the tracking of lines/captures
+    pub fn keep_lines(mut self, track_lines: bool) -> Self {
+        self.track_lines = track_lines;
+        self
+    }
+
     fn add(&mut self, m: Line) {
-        if self.with_line_numbers {
-            self.matches.add(m.line_number(self.line_number));
+        if self.track_lines {
+            if self.with_line_numbers {
+                self.matches.add(m.line_number(self.line_number));
+            } else {
+                self.matches.add(m);
+            }
         } else {
-            self.matches.add(m);
+            self.matches.increment();
         }
     }
 
@@ -149,14 +183,49 @@ impl<'a> Matcher<'a> {
         self.line_number += 1;
     }
 
-    /// Mutably consumes the matcher and returns a result with the matches.
-    fn collect<T: BufRead>(mut self, reader: &mut T) -> std::io::Result<Matches> {
+    fn match_line(&self, line: &str) -> Option<Line> {
+        let captures: Vec<Capture> = self.regex
+            .captures_iter(&line)
+            .filter_map(|caps| caps.get(0))
+            .map(|m| {
+                Capture {
+                    start: m.start(),
+                    end: m.end(),
+                    value: m.as_str().to_string(),
+                }
+            })
+            .collect();
+        if captures.len() > 0 {
+            Some(Line::new(line.to_string(), captures))
+        } else {
+            None
+        }
+    }
+
+    /// Consumes the matcher and returns a result with the matches.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # extern crate regex;
+    /// # extern crate grusp_core;
+    /// # fn main() {
+    /// use grusp_core::grusp::Matcher;
+    /// use std::io::Cursor;
+    ///
+    /// let reg = regex::Regex::new(r"test").unwrap();
+    /// let mut buf_read = Cursor::new("test\nnot\ntest");
+    /// let matches = Matcher::new(&reg).collect(&mut buf_read).unwrap();
+    /// assert_eq!(matches.count, 2);
+    /// # }
+    /// ```
+    pub fn collect<T: BufRead>(mut self, reader: &mut T) -> std::io::Result<Matches> {
         loop {
             let mut line = String::new();
             match reader.read_line(&mut line) {
                 Ok(size) if size > 0 => {
                     self.increment_line_number();
-                    if let Some(m) = match_line(&line, &self.regex) {
+                    if let Some(m) = self.match_line(&line) {
                         self.add(m);
                     }
                 }
@@ -167,46 +236,16 @@ impl<'a> Matcher<'a> {
     }
 }
 
-/// Finds matches against a bufreader using the available regex. Does not collect line numbers
-pub fn find_matches_wo_line_numbers<T: BufRead>(mut reader: T, regex: &Regex) -> std::io::Result<Matches> {
-    Matcher::new(&regex).with_line_numbers(false).collect(&mut reader)
-}
-
-/// Finds matches against a bufreader using the available regex.
-pub fn find_matches<T: BufRead>(mut reader: T, regex: &Regex) -> std::io::Result<Matches> {
-    Matcher::new(&regex).collect(&mut reader)
-}
-
-fn match_line(line: &str, regex: &Regex) -> Option<Line> {
-    let cap_matches = regex.captures_iter(&line);
-    let captures: Vec<Capture> = cap_matches
-        .map(|caps| caps.get(0))
-        .filter(|m| m.is_some())
-        .map(|m| m.unwrap())
-        .map(|m| {
-            Capture {
-                start: m.start(),
-                end: m.end(),
-                value: m.as_str().to_string(),
-            }
-        })
-        .collect();
-    if captures.len() > 0 {
-        Some(Line::new(line.to_string(), captures))
-    } else {
-        None
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use regex::Regex;
+    use std::io::Cursor;
 
     #[test]
     fn finding_matches_on_a_line() {
         let reg = Regex::new(r"test").unwrap();
-        let m = match_line("some test line with test matching", &reg).unwrap();
+        let m = Matcher::new(&reg).match_line("some test line with test matching").unwrap();
         assert_eq!(m.number, None);
         assert_eq!(m.captures.len(), 2);
         assert_eq!(m.value, "some test line with test matching");
@@ -215,7 +254,7 @@ mod tests {
     #[test]
     fn finding_matches_on_a_line_returns_none() {
         let reg = Regex::new(r"asdf").unwrap();
-        let m = match_line("some test line with test matching", &reg);
+        let m = Matcher::new(&reg).match_line("some test line with test matching");
         assert!(m.is_none());
     }
 
@@ -287,47 +326,52 @@ mod tests {
     #[test]
     fn find_main_rs() {
         let reg = Regex::new(r"fn\s+main").unwrap();
-        use std::io::Cursor;
         let mut buf_read = Cursor::new("some text\nfn    main() {}\nhello");
-        let matches = find_matches(&mut buf_read, &reg).unwrap();
+        let matches = Matcher::new(&reg).collect(&mut buf_read).unwrap();
         assert_eq!(matches.path, None);
         assert_eq!(matches.count, 1);
-        assert_eq!(matches.matches.len(), 1);
-        assert!(reg.is_match(&matches.matches[0].value));
+        assert_eq!(matches.lines.len(), 1);
+        assert!(reg.is_match(&matches.lines[0].value));
         assert!(matches.has_matches());
     }
 
     #[test]
     fn it_can_skip_line_numbers() {
         let reg = Regex::new(r"test").unwrap();
-        use std::io::Cursor;
         let mut buf_read = Cursor::new("test\nnot\ntest");
-        let matches = find_matches_wo_line_numbers(&mut buf_read, &reg).unwrap();
+        let matches = Matcher::new(&reg).with_line_numbers(false).collect(&mut buf_read).unwrap();
         assert_eq!(matches.count, 2);
-        assert_eq!(matches.matches.len(), 2);
-        assert_eq!(matches.matches[0].number, None);
-        assert_eq!(matches.matches[1].number, None);
+        assert_eq!(matches.lines.len(), 2);
+        assert_eq!(matches.lines[0].number, None);
+        assert_eq!(matches.lines[1].number, None);
     }
 
     #[test]
     fn it_tracks_the_line_numbers_from_one() {
         let reg = Regex::new(r"test").unwrap();
-        use std::io::Cursor;
         let mut buf_read = Cursor::new("test\nnot\ntest");
-        let matches = find_matches(&mut buf_read, &reg).unwrap();
+        let matches = Matcher::new(&reg).collect(&mut buf_read).unwrap();
         assert_eq!(matches.count, 2);
-        assert_eq!(matches.matches.len(), 2);
-        assert_eq!(matches.matches[0].number, Some(1));
-        assert_eq!(matches.matches[1].number, Some(3));
+        assert_eq!(matches.lines.len(), 2);
+        assert_eq!(matches.lines[0].number, Some(1));
+        assert_eq!(matches.lines[1].number, Some(3));
     }
 
     #[test]
     fn finds_all_the_captures() {
         let reg = Regex::new(r"test").unwrap();
-        use std::io::Cursor;
         let mut buf_read = Cursor::new("test a test b test");
-        let matches = find_matches(&mut buf_read, &reg).unwrap();
+        let matches = Matcher::new(&reg).collect(&mut buf_read).unwrap();
         assert!(matches.has_matches());
-        assert_eq!(matches.matches[0].captures[0].value, "test".to_string());
+        assert_eq!(matches.lines[0].captures[0].value, "test".to_string());
+    }
+
+    #[test]
+    fn skips_tracking_lines_and_captures() {
+        let reg = Regex::new(r"test").unwrap();
+        let mut buf_read = Cursor::new("test a test b test");
+        let matches = Matcher::new(&reg).keep_lines(false).collect(&mut buf_read).unwrap();
+        assert!(matches.has_matches());
+        assert_eq!(matches.lines.len(), 0)
     }
 }

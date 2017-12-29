@@ -13,7 +13,7 @@ mod files;
 
 /// The core module for finding matches within files.
 pub mod grusp {
-    pub use matcher::{find_matches_wo_line_numbers, find_matches, Stats as StatCollector};
+    pub use matcher::{Matcher, Stats as StatCollector};
     pub use display::{MatchesDisplay as Display};
     pub use files::{Collecter as FileCollector};
 }
