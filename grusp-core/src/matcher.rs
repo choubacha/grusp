@@ -124,6 +124,7 @@ pub struct Matcher<'a> {
     regex: &'a Regex,
     with_line_numbers: bool,
     track_lines: bool,
+    is_inverted: bool,
 }
 
 impl<'a> Matcher<'a> {
@@ -135,6 +136,7 @@ impl<'a> Matcher<'a> {
             regex,
             with_line_numbers: true,
             track_lines: true,
+            is_inverted: false,
         }
     }
 
@@ -158,6 +160,30 @@ impl<'a> Matcher<'a> {
     /// ```
     pub fn with_line_numbers(mut self, w: bool) -> Self {
         self.with_line_numbers = w;
+        self
+    }
+
+    /// Can tell the matcher to match on non-matching lines instead of matching lines.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # extern crate regex;
+    /// # extern crate grusp_core;
+    /// # fn main() {
+    /// use grusp_core::grusp::Matcher;
+    /// use std::io::Cursor;
+    ///
+    /// let reg = regex::Regex::new(r"test").unwrap();
+    /// let mut buf_read = Cursor::new("test\nnot\ntest");
+    /// let matches = Matcher::new(&reg).invert_match(true).collect(&mut buf_read).unwrap();
+    /// assert_eq!(matches.lines.len(), 1);
+    /// assert_eq!(matches.lines[0].number, Some(2));
+    /// assert_eq!(matches.lines[0].captures.len(), 0);
+    /// # }
+    /// ```
+    pub fn invert_match(mut self, is_inverted: bool) -> Self {
+        self.is_inverted = is_inverted;
         self
     }
 
@@ -195,7 +221,10 @@ impl<'a> Matcher<'a> {
                 }
             })
             .collect();
-        if captures.len() > 0 {
+        // When empty, only return if we're inverting the match
+        // When not empty, only return if we're not inverting the match
+        if (!captures.is_empty() && !self.is_inverted) ||
+            (captures.is_empty() && self.is_inverted) {
             Some(Line::new(line.to_string(), captures))
         } else {
             None
@@ -373,5 +402,19 @@ mod tests {
         let matches = Matcher::new(&reg).keep_lines(false).collect(&mut buf_read).unwrap();
         assert!(matches.has_matches());
         assert_eq!(matches.lines.len(), 0)
+    }
+
+    #[test]
+    fn inverts_the_matches() {
+        let reg = Regex::new(r"test").unwrap();
+        let mut buf_read = Cursor::new("test a test b test\nanother line");
+        let matches = Matcher::new(&reg)
+            .invert_match(true)
+            .collect(&mut buf_read)
+            .unwrap();
+        assert!(matches.has_matches());
+        assert_eq!(matches.lines.len(), 1);
+        assert_eq!(matches.lines[0].number, Some(2));
+        assert_eq!(matches.lines[0].captures.len(), 0);
     }
 }

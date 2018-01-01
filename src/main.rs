@@ -37,11 +37,10 @@ fn main() {
     } else {
         let stdin = stdin();
         let mut reader = stdin.lock();
-        let matches = grusp::Matcher::new(&opts.regex)
-            .keep_lines(!(opts.files_with_matches || opts.is_count_only))
+        let matches = matcher_from_opts(&opts)
             .with_line_numbers(false)
             .collect(&mut reader)
-            .expect("Could not parse file");
+            .expect("Could not parse stdin");
         if matches.has_matches() {
             println!(
                 "{}",
@@ -56,11 +55,16 @@ fn main() {
     }
 }
 
+fn matcher_from_opts(opts: &args::Opts) -> grusp::Matcher {
+    grusp::Matcher::new(&opts.regex)
+        .keep_lines(!(opts.files_with_matches || opts.is_count_only))
+        .invert_match(opts.is_inverted)
+}
+
 fn match_file(path: PathBuf, opts: &args::Opts, stats: &grusp::StatCollector) {
     let handle = File::open(&path).unwrap();
     let mut reader = BufReader::new(handle);
-    let matches = grusp::Matcher::new(&opts.regex)
-        .keep_lines(!(opts.files_with_matches || opts.is_count_only))
+    let matches = matcher_from_opts(&opts)
         .collect(&mut reader)
         .expect("Could not parse file")
         .add_path(&path);
