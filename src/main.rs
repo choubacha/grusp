@@ -21,15 +21,26 @@ fn main() {
             std::process::exit(1);
         }
     };
+    let matcher = grusp::Matcher::new(&opts.regex)
+        .keep_lines(!(opts.files_with_matches || opts.is_count_only))
+        .invert_match(opts.is_inverted);
 
     if let Some(ref queries) = opts.queries {
         let stats = grusp::StatCollector::new();
         let files = grusp::FileCollector::new(&queries).max_depth(opts.max_depth).collect();
 
         if opts.is_concurrent {
-            files.into_par_iter().for_each(|p| match_file(p, &opts, &stats));
+            files
+                .into_par_iter()
+                .for_each(|p| {
+                    match_file(p, &opts, &matcher, &stats)
+                });
         } else {
-            files.into_iter().for_each(|p| match_file(p, &opts, &stats));
+            files
+                .into_iter()
+                .for_each(|p| {
+                    match_file(p, &opts, &matcher, &stats)
+                });
         };
         if stats.total() == 0 {
             std::process::exit(1);
@@ -37,7 +48,7 @@ fn main() {
     } else {
         let stdin = stdin();
         let mut reader = stdin.lock();
-        let matches = matcher_from_opts(&opts)
+        let matches = matcher
             .with_line_numbers(false)
             .collect(&mut reader)
             .expect("Could not parse stdin");
@@ -55,16 +66,13 @@ fn main() {
     }
 }
 
-fn matcher_from_opts(opts: &args::Opts) -> grusp::Matcher {
-    grusp::Matcher::new(&opts.regex)
-        .keep_lines(!(opts.files_with_matches || opts.is_count_only))
-        .invert_match(opts.is_inverted)
-}
-
-fn match_file(path: PathBuf, opts: &args::Opts, stats: &grusp::StatCollector) {
+fn match_file(path: PathBuf,
+              opts: &args::Opts,
+              matcher: &grusp::Matcher,
+              stats: &grusp::StatCollector) {
     let handle = File::open(&path).unwrap();
     let mut reader = BufReader::new(handle);
-    let matches = matcher_from_opts(&opts)
+    let matches = matcher
         .collect(&mut reader)
         .expect("Could not parse file")
         .add_path(&path);
