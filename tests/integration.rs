@@ -84,4 +84,66 @@ mod integration {
             .contains("find")
             .unwrap();
     }
+
+    #[test]
+    fn it_can_find_files_with_matches() {
+        assert_cli::Assert::main_binary()
+            .with_args(
+                &[
+                    "--nocolor",
+                    "--files-with-matches",
+                    "FIND",
+                    "./tests/fixtures/example-1.txt",
+                    "./tests/fixtures/example-2.txt",
+                ],
+            )
+            .succeeds()
+            .stdout()
+            .contains("example-1.txt")
+            .stdout()
+            .not()
+            .contains("example-2.txt")
+            .unwrap();
+    }
+
+    #[test]
+    fn it_can_find_files_without_matches() {
+        assert_cli::Assert::main_binary()
+            .with_args(
+                &[
+                    "--nocolor",
+                    "--files-without-matches",
+                    "FIND",
+                    "./tests/fixtures/example-1.txt",
+                    "./tests/fixtures/example-2.txt",
+                ],
+            )
+            .succeeds()
+            .stdout()
+            .contains("example-2.txt")
+            .stdout()
+            .not()
+            .contains("example-1.txt")
+            .unwrap();
+    }
+
+    #[test]
+    fn succeeds_when_finding_files_without_matches_and_none_match() {
+        assert_cli::Assert::main_binary()
+            .with_args(
+                &[
+                    "--nocolor",
+                    "--files-without-matches",
+                    "gibberish",
+                    "./tests/fixtures/example-1.txt",
+                    "./tests/fixtures/example-2.txt",
+                ],
+            )
+            .succeeds()
+            .stdout()
+            .contains("example-2.txt")
+            .stdout()
+            .contains("example-1.txt")
+            .unwrap();
+    }
 }

@@ -22,12 +22,13 @@ fn main() {
         }
     };
     let matcher = grusp::Matcher::new(&opts.regex)
-        .keep_lines(!(opts.files_with_matches || opts.is_count_only))
+        .keep_lines(!(opts.just_files.is_some() || opts.is_count_only))
         .invert_match(opts.is_inverted);
 
     if let Some(ref queries) = opts.queries {
         let stats = grusp::StatCollector::new();
         let files = grusp::FileCollector::new(&queries).max_depth(opts.max_depth).collect();
+        let has_files = !files.is_empty();
 
         if opts.is_concurrent {
             files
@@ -42,7 +43,7 @@ fn main() {
                     match_file(p, &opts, &matcher, &stats)
                 });
         };
-        if stats.total() == 0 {
+        if stats.total() == 0 && !(has_files && opts.just_files.without_matches()) {
             std::process::exit(1);
         }
     } else {
@@ -58,7 +59,7 @@ fn main() {
                 grusp::Display::new(matches)
                     .count_only(opts.is_count_only)
                     .color(opts.is_colored)
-                    .just_file_names(opts.files_with_matches)
+                    .just_file_names(opts.just_files.is_some())
             );
         } else {
             std::process::exit(1);
@@ -76,14 +77,15 @@ fn match_file(path: PathBuf,
         .collect(&mut reader)
         .expect("Could not parse file")
         .add_path(&path);
-    if matches.has_matches() {
-        stats.add(&matches);
+    stats.add(&matches);
+    if (matches.has_matches() && opts.just_files.show_matches()) ||
+        (!matches.has_matches() && opts.just_files.without_matches()) {
         println!(
             "{}",
             grusp::Display::new(matches)
                 .count_only(opts.is_count_only)
                 .color(opts.is_colored)
-                .just_file_names(opts.files_with_matches)
+                .just_file_names(opts.just_files.is_some())
         );
     }
 }
