@@ -12,7 +12,30 @@ pub struct Opts {
     pub is_colored: bool,
     pub is_inverted: bool,
     pub max_depth: Option<usize>,
-    pub files_with_matches: bool,
+    pub just_files: JustFiles,
+}
+
+#[derive(Eq, PartialEq)]
+pub enum JustFiles {
+    WithMatches,
+    WithoutMatches,
+    None,
+}
+
+impl JustFiles {
+    #[inline]
+    pub fn without_matches(&self) -> bool {
+        *self == JustFiles::WithoutMatches
+    }
+
+    #[inline]
+    pub fn show_matches(&self) -> bool {
+        *self != JustFiles::WithoutMatches
+    }
+
+    pub fn is_some(&self) -> bool {
+        *self != JustFiles::None
+    }
 }
 
 #[derive(Debug)]
@@ -124,6 +147,14 @@ pub fn get_opts() -> Result<Opts, ArgError> {
             "Only print the names of files containing matches, not the matching lines. An empty query will print all files that would be searched.",
         ))
         .arg(
+            Arg::with_name("files-without-matches")
+                .long("files-without-matches")
+                .conflicts_with("files-with-matches")
+                .help(
+                "Only print the names of files not containing matches. An empty query will print no files.",
+                )
+        )
+        .arg(
             Arg::with_name("depth")
                 .takes_value(true)
                 .value_name("NUM")
@@ -157,7 +188,13 @@ for detailed information https://doc.rust-lang.org/regex/regex/index.html."),
         !matches.is_present("case-sensitive");
     let is_count_only = matches.is_present("count");
     let max_depth: Option<usize> = matches.value_of("depth").map(|v| v.parse().expect("Depth must be an valid integer"));
-    let files_with_matches = matches.is_present("files-with-matches");
+    let just_files = if matches.is_present("files-with-matches") {
+        JustFiles::WithMatches
+    } else if matches.is_present("files-without-matches") {
+        JustFiles::WithoutMatches
+    } else {
+        JustFiles::None
+    };
     let is_inverted = matches.is_present("invert-match");
     Ok(Opts {
         regex: get_regex(regex, case_insensitive)?,
@@ -166,7 +203,7 @@ for detailed information https://doc.rust-lang.org/regex/regex/index.html."),
         is_colored,
         is_count_only,
         max_depth,
-        files_with_matches,
+        just_files,
         is_inverted,
     })
 }
