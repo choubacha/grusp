@@ -60,7 +60,7 @@ impl<'a> Collecter<'a> {
     /// use grusp_core::grusp;
     /// let queries = vec!["example_dir/**/*.txt".to_string()];
     /// let files = grusp::FileCollector::new(&queries).collect();
-    /// assert_eq!(files.len(), 4)
+    /// assert_eq!(files.len(), 5)
     /// ```
     pub fn collect(self) -> Vec<PathBuf> {
         let mut files = Vec::new();
@@ -76,6 +76,9 @@ impl<'a> Collecter<'a> {
     }
 
     fn recurse(&self, path: PathBuf, files: &mut Vec<PathBuf>, depth: usize) -> Result<()> {
+        if Self::is_hidden(&path) {
+            return Ok(())
+        }
         if path.is_dir() {
             if let Some(max_depth) = self.max_depth {
                 if max_depth < depth { return Ok(()); };
@@ -90,6 +93,18 @@ impl<'a> Collecter<'a> {
         }
         Ok(())
     }
+
+    fn is_hidden(path: &PathBuf) -> bool {
+        match path.file_name() {
+            Some(file_name) => {
+                match file_name.to_str() {
+                    Some(s) => s.starts_with("."),
+                    None => true,
+                }
+            }
+            None => true,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -102,7 +117,7 @@ mod tests {
         let queries = vec!["./example_dir/**/*.txt".to_string()];
         let files = Collecter::new(&queries).collect();
 
-        assert_eq!(files.len(), 4);
+        assert_eq!(files.len(), 5);
         assert!(files.contains(
             &Path::new("example_dir/sub_dir/sub-example-1.txt").to_owned(),
         ));
@@ -158,5 +173,23 @@ mod tests {
         assert!(files.contains(
             &Path::new("example_dir/example-1.txt").to_owned(),
         ));
+    }
+
+    #[test]
+    fn it_ignores_hidden_files() {
+        let query = vec!["./example_dir".to_string()];
+        let files = Collecter::new(&query).collect();
+
+        assert_eq!(files.len(), 4);
+        assert!(!files.contains(&Path::new("example_dir/.hidden.txt").to_owned()));
+    }
+
+    #[test]
+    fn it_ignores_hidden_directories() {
+        let query = vec!["./example_dir".to_string()];
+        let files = Collecter::new(&query).collect();
+
+        assert_eq!(files.len(), 4);
+        assert!(!files.contains(&Path::new("example_dir/.hidden.txt").to_owned()));
     }
 }
