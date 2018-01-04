@@ -190,7 +190,29 @@ impl<'a> Matcher<'a> {
         self
     }
 
-    /// Consumes the matcher and returns a result with the matches.
+    fn match_line(&self, line: &str) -> Option<Line> {
+        let captures: Vec<Capture> = self.regex
+            .captures_iter(&line)
+            .filter_map(|caps| caps.get(0))
+            .map(|m| {
+                Capture {
+                    start: m.start(),
+                    end: m.end(),
+                    value: m.as_str().to_string(),
+                }
+            })
+            .collect();
+        // When empty, only return if we're inverting the match
+        // When not empty, only return if we're not inverting the match
+        if !(captures.is_empty() || self.is_inverted) ||
+            (captures.is_empty() && self.is_inverted) {
+            Some(Line::new(line.to_string(), captures))
+        } else {
+            None
+        }
+    }
+
+    /// Collects all the matches from a buffer.
     ///
     /// # Examples
     ///
@@ -254,16 +276,6 @@ impl<'a> Collector<'a> {
     }
 
     #[inline]
-    fn regex(&self) -> &Regex {
-        self.matcher.regex
-    }
-
-    #[inline]
-    fn is_inverted(&self) -> bool {
-        self.matcher.is_inverted
-    }
-
-    #[inline]
     fn increment_line_number(&mut self) {
         self.line_number += 1;
     }
@@ -271,30 +283,8 @@ impl<'a> Collector<'a> {
     #[inline]
     fn handle(&mut self, line: &str) {
         self.increment_line_number();
-        if let Some(m) = self.match_line(&line) {
+        if let Some(m) = self.matcher.match_line(&line) {
             self.add(m);
-        }
-    }
-
-    fn match_line(&self, line: &str) -> Option<Line> {
-        let captures: Vec<Capture> = self.regex()
-            .captures_iter(&line)
-            .filter_map(|caps| caps.get(0))
-            .map(|m| {
-                Capture {
-                    start: m.start(),
-                    end: m.end(),
-                    value: m.as_str().to_string(),
-                }
-            })
-            .collect();
-        // When empty, only return if we're inverting the match
-        // When not empty, only return if we're not inverting the match
-        if !(captures.is_empty() || self.is_inverted()) ||
-            (captures.is_empty() && self.is_inverted()) {
-            Some(Line::new(line.to_string(), captures))
-        } else {
-            None
         }
     }
 
@@ -320,7 +310,7 @@ mod tests {
     #[test]
     fn finding_matches_on_a_line() {
         let reg = Regex::new(r"test").unwrap();
-        let m = Collector::new(&Matcher::new(&reg)).match_line("some test line with test matching").unwrap();
+        let m = Matcher::new(&reg).match_line("some test line with test matching").unwrap();
         assert_eq!(m.number, None);
         assert_eq!(m.captures.len(), 2);
         assert_eq!(m.value, "some test line with test matching");
@@ -329,7 +319,7 @@ mod tests {
     #[test]
     fn finding_matches_on_a_line_returns_none() {
         let reg = Regex::new(r"asdf").unwrap();
-        let m = Collector::new(&Matcher::new(&reg)).match_line("some test line with test matching");
+        let m = Matcher::new(&reg).match_line("some test line with test matching");
         assert!(m.is_none());
     }
 
