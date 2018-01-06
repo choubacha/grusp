@@ -4,28 +4,39 @@ or ack or ag but simply be a test bed for developing and learning rust.
 
 [![CircleCI](https://circleci.com/gh/kbacha/grusp.svg?style=svg)](https://circleci.com/gh/kbacha/grusp)
 
-### usage
+### Usage
 
 ```
-$ target/debug/grusp --help
+$ grusp --help
 Grusp
-Kevin C. <chewbacha@gmail.com>; Charlie K
+Kevin C. <chewbacha@gmail.com>; Charlie K. <bringking@gmail.com>
 Searches with regex through files. For fun!
 
 USAGE:
-    grusp [FLAGS] <REGEX> [PATTERN]...
+    grusp [FLAGS] [OPTIONS] <REGEX> [PATTERN]...
 
 FLAGS:
-    -s, --case-sensitive    Regex is matched case sensitively
-    -h, --help              Prints help information
-    -i, --ignore-case       Regex is matched case insensitively
-        --nocolor           Output is not colored
-        --unthreaded        Runs in a single thread
-    -V, --version           Prints version information
+    -s, --case-sensitive           Regex is matched case sensitively
+    -c, --count                    Just counts the matches found
+        --files-with-matches       Only print the names of files containing matches, not the matching lines. An empty
+                                   query will print all files that would be searched.
+        --files-without-matches    Only print the names of files not containing matches. An empty query will print no
+                                   files.
+    -h, --help                     Prints help information
+    -i, --ignore-case              Regex is matched case insensitively
+    -v, --invert-match             Match every line not containing the specified pattern
+        --nocolor                  Output is not colored
+        --unthreaded               Runs in a single thread
+    -V, --version                  Prints version information
+
+OPTIONS:
+        --depth <NUM>    Search up to NUM directories deep
 
 ARGS:
-    <REGEX>         The pattern that should be matched
-    <PATTERN>...    The files to search
+    <REGEX>         The pattern that should be matched. This can be any valid Perl-style
+                    Regular expression, with a few caveats. See the Rust Regex documentation for detailed
+                    information https://doc.rust-lang.org/regex/regex/index.html.
+    <PATTERN>...    The files to search. This is optional and not used if grusp is searching from stdin
 ```
 
 ```
@@ -56,7 +67,7 @@ src/matcher.rs matched 9 times
 92:        let reg = Regex::new(r"fn\s+main").unwrap();
 ```
 
-### contributing
+### Contributing
 
 Feel free to fork and propose changes as you see opportunities. PRs will be reviewed
 and merged after they are approved.
