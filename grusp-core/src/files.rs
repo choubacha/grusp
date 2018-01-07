@@ -95,14 +95,10 @@ impl<'a> Collecter<'a> {
     }
 
     fn is_hidden(path: &PathBuf) -> bool {
-        match path.file_name() {
-            Some(file_name) => {
-                match file_name.to_str() {
-                    Some(s) => s.starts_with("."),
-                    None => true,
-                }
-            }
-            None => true,
+        if let Some(file_name) = path.file_name().and_then(|f| f.to_str()) {
+            file_name.starts_with(".")
+        } else {
+            false
         }
     }
 }
@@ -191,5 +187,12 @@ mod tests {
 
         assert_eq!(files.len(), 4);
         assert!(!files.contains(&Path::new("example_dir/.hidden.txt").to_owned()));
+    }
+
+    #[test]
+    fn can_determine_whether_a_path_is_hidden() {
+        assert!(!Collecter::is_hidden(&Path::new(".").to_path_buf()));
+        assert!(!Collecter::is_hidden(&Path::new("example_dir").to_path_buf()));
+        assert!(Collecter::is_hidden(&Path::new("example_dir/.hiiden").to_path_buf()));
     }
 }
